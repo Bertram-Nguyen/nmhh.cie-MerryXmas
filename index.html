@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magic Christmas - Local Only</title>
+    <title>Magic Christmas - Decoupled Interaction</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -128,7 +128,7 @@
         const loader = new THREE.TextureLoader();
         let loadedPhotos = []; 
 
-        // --- CHỈ SCAN ẢNH TỪ FOLDER "image/" ---
+        // --- SCAN IMAGES ---
         function scanImages() {
             return new Promise((resolve) => {
                 const maxImagesToCheck = 50;
@@ -136,11 +136,9 @@
                 let currentIndex = 1;
                 let consecutiveErrors = 0;
                 let pendingImages = 0;
-                // Danh sách đuôi file cần kiểm tra
                 const extensions = ['.jpg', '.png', '.jpeg'];
 
                 const tryLoadImage = (index) => {
-                    // Điều kiện dừng: Quét quá 50 ảnh HOẶC lỗi liên tiếp 3 lần
                     if (index > maxImagesToCheck || consecutiveErrors >= 3) {
                         if (pendingImages === 0) finishScan();
                         return;
@@ -148,13 +146,11 @@
                     pendingImages++;
                     let extIndex = 0;
                     
-                    // Thử từng đuôi file cho 1 số thứ tự (ví dụ: thử 1.jpg, rồi 1.png...)
                     const attemptLoad = () => {
                         if (extIndex >= extensions.length) {
-                            // Hết đuôi mà không thấy -> Coi như không có ảnh số này
                             pendingImages--;
                             consecutiveErrors++;
-                            tryLoadImage(index + 1); // Thử ảnh tiếp theo
+                            tryLoadImage(index + 1);
                             return;
                         }
                         const currentExt = extensions[extIndex];
@@ -163,16 +159,16 @@
 
                         img.onload = () => {
                             pendingImages--;
-                            consecutiveErrors = 0; // Reset lỗi vì tìm thấy ảnh
+                            consecutiveErrors = 0;
                             const aspect = img.width / img.height;
                             const texture = new THREE.CanvasTexture(img);
                             console.log(`Loaded: ${fileName}`);
                             loadedPhotos.push({ index: index, texture: texture, aspect: aspect });
-                            tryLoadImage(index + 1); // Tìm ảnh tiếp theo
+                            tryLoadImage(index + 1); 
                         };
                         img.onerror = () => {
                             extIndex++;
-                            attemptLoad(); // Thử đuôi khác
+                            attemptLoad();
                         };
                         img.src = fileName;
                     };
@@ -183,14 +179,12 @@
                     loadedPhotos.sort((a, b) => a.index - b.index);
                     
                     if (loadedPhotos.length === 0) {
-                        // KHÔNG TÌM THẤY ẢNH -> HIỆN LỖI, KHÔNG CHẠY TIẾP
                         const errDiv = document.getElementById('error-msg');
                         const startBtn = document.getElementById('btnStart');
                         const loadingText = document.querySelector('#loading small');
                         
-                        // Ẩn text loading
                         if(loadingText) loadingText.style.display = 'none';
-                        startBtn.style.display = 'none'; // Ẩn nút start
+                        startBtn.style.display = 'none'; 
 
                         errDiv.style.display = 'block';
                         errDiv.innerHTML = `
@@ -202,11 +196,10 @@
                             (Trình duyệt chặn file local nếu mở trực tiếp)
                         `;
                     } else {
-                        // Tìm thấy ảnh -> OK
                         resolve();
                     }
                 };
-                tryLoadImage(1); // Bắt đầu từ số 1
+                tryLoadImage(1);
             });
         }
 
@@ -255,13 +248,15 @@
             explodeRadius: 60, treeHeight: 75, treeBaseRadius: 32
         };
 
-        let scene, camera, renderer, composer;
+        let scene, camera, renderer, composer, bloomPass;
         let groupGold, groupRed, groupGift, groupSnow; 
         let photoMeshes = [];
         let titleMesh, starMesh, loveMesh, cursorMesh;
         
         let state = 'TREE'; 
         let selectedIndex = 0;
+        // Biến kiểm tra xem tay có đang hover vào ảnh nào không
+        let isHoveringPhoto = false; 
         let handX = 0.5, handY = 0.5;
         let isHandDetected = false;
 
@@ -284,7 +279,7 @@
             container.appendChild(renderer.domElement);
 
             const renderScene = new THREE.RenderPass(scene, camera);
-            const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
             bloomPass.threshold = 0.2; bloomPass.strength = 0.8; bloomPass.radius = 0.5;
 
             composer = new THREE.EffectComposer(renderer);
@@ -388,7 +383,7 @@
 
         function createPhotos() {
             const baseHeight = 8; 
-            photoMeshes = []; // Reset mảng mesh
+            photoMeshes = []; 
             
             for(let i=0; i < loadedPhotos.length; i++) {
                 const photoData = loadedPhotos[i];
@@ -441,10 +436,15 @@
             const ud = group.geometry.userData;
             const target = (state==='TREE') ? ud.tree : (state==='HEART'? ud.heart : ud.explode);
             
-            // Xoay nhẹ tự động
-            if (state === 'EXPLODE') group.rotation.y += 0.002;
-            else if (state === 'TREE') group.rotation.y += 0.005;
-            else group.rotation.y += 0.002;
+            // --- FIX QUAN TRỌNG: Tách biệt hoàn toàn handX khỏi rotation ---
+            // Chỉ xoay tự động. Nếu đang hover vào ảnh thì DỪNG XOAY để dễ chọn.
+            if (state === 'EXPLODE' && !isHoveringPhoto) {
+                group.rotation.y += 0.0015; // Tốc độ xoay tự động
+            } else if (state === 'TREE') {
+                group.rotation.y += 0.005;
+            } else if (state === 'HEART') {
+                group.rotation.y = 0;
+            }
 
             for(let i=0; i<pos.length; i++) {
                 pos[i] += (target[i] - pos[i]) * speed;
@@ -467,6 +467,11 @@
             requestAnimationFrame(animate);
             const time = Date.now() * 0.001;
             
+            if (bloomPass) {
+                const targetStrength = (state === 'PHOTO') ? 0 : 0.8;
+                bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, targetStrength, 0.1);
+            }
+
             updateParticles(groupGold, 'gold', time, 0.08);
             updateParticles(groupRed, 'red', time, 0.08);
             updateParticles(groupGift, 'gift', time, 0.08);
@@ -485,6 +490,8 @@
             starMesh.visible = (state === 'TREE');
             loveMesh.visible = (state === 'HEART');
             
+            isHoveringPhoto = false; // Reset hover state mỗi frame
+
             if (state === 'EXPLODE' || state === 'PHOTO') {
                 const totalPhotos = photoMeshes.length;
                 if (totalPhotos > 0) {
@@ -500,7 +507,6 @@
 
                         if(state === 'EXPLODE') {
                             const angle = groupGold.rotation.y + i*step;
-                            
                             const targetPos = new THREE.Vector3(
                                 Math.sin(angle) * dynamicRadius, 
                                 Math.sin(time + i) * 2, 
@@ -511,9 +517,13 @@
                             m.lookAt(camera.position);
 
                             const dist = cursorMesh.position.distanceTo(m.position);
-                            if (dist < minDist) {
-                                minDist = dist;
-                                closestIdx = i;
+                            // Nếu tay ở gần ảnh (< 12 đơn vị), coi như đang hover
+                            if (dist < 12) {
+                                if(dist < minDist) {
+                                    minDist = dist;
+                                    closestIdx = i;
+                                }
+                                isHoveringPhoto = true; // Báo hiệu để dừng xoay
                             }
                         } 
                         
@@ -527,14 +537,14 @@
                             }
                         } else {
                             let targetScale = 1.0;
+                            // Hover Effect
                             if (i === closestIdx) {
                                 targetScale = 1.3;
-                                m.children[0].material.color.setHex(0xFFFFFF);
+                                m.children[0].material.color.setHex(0xFFFFFF); // Viền trắng
                             } else {
                                 targetScale = (totalPhotos > 15 ? 0.8 : 1.0);
-                                m.children[0].material.color.setHex(0xFFD700); 
+                                m.children[0].material.color.setHex(0xFFD700); // Viền vàng
                             }
-                            
                             const finalScale = m.userData.originalScale.clone().multiplyScalar(targetScale);
                             m.scale.lerp(finalScale, 0.2);
                         }
@@ -562,7 +572,6 @@
             try {
                 await scanImages();
 
-                // Nếu không tìm thấy ảnh thì đã hiện lỗi và dừng, không chạy tiếp đoạn này
                 if (loadedPhotos.length > 0) {
                     await bgMusic.play();
                     init3D();
