@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magic Christmas - Dynamic Gallery</title>
+    <title>Magic Christmas - Local Only</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -84,6 +84,11 @@
             text-align: center;
         }
         #loading small { font-size: 14px; opacity: 0.7; display: block; margin-top: 10px; color: #FFD700;}
+        #error-msg {
+            color: #FF5252; font-weight: bold; margin-top: 15px; display: none; font-size: 16px;
+            background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; border: 1px solid #FF5252;
+            line-height: 1.6;
+        }
 
         #copyright {
             position: absolute; bottom: 10px; right: 20px;
@@ -94,8 +99,9 @@
 </head>
 <body>
     <div id="loading">
-        SCANNING IMAGE FOLDER...
-        <small>Make sure photos are named 1.jpg, 2.jpg...</small>
+        SCANNING LOCAL PHOTOS...
+        <small>Searching for 1.jpg, 2.jpg in "image" folder...</small>
+        <div id="error-msg"></div>
     </div>
 
     <div id="ui-layer">
@@ -120,62 +126,87 @@
         bgMusic.loop = true; bgMusic.volume = 1.0;
 
         const loader = new THREE.TextureLoader();
-        let loadedPhotoTextures = []; // Mảng chứa các texture ảnh đã tìm thấy
+        let loadedPhotos = []; 
 
-        // --- LOGIC QUÉT ẢNH TỰ ĐỘNG ---
-        // Hàm này sẽ cố gắng load từ 1.jpg đến 50.jpg
+        // --- CHỈ SCAN ẢNH TỪ FOLDER "image/" ---
         function scanImages() {
             return new Promise((resolve) => {
-                const maxImagesToCheck = 50; // Quét tối đa 50 ảnh
+                const maxImagesToCheck = 50;
                 const folderPath = 'image/'; 
-                let completedChecks = 0;
-                let foundImages = []; // Mảng tạm để lưu ảnh đúng thứ tự
+                let currentIndex = 1;
+                let consecutiveErrors = 0;
+                let pendingImages = 0;
+                // Danh sách đuôi file cần kiểm tra
+                const extensions = ['.jpg', '.png', '.jpeg'];
 
-                // Nếu không quét xong sau 3 giây, tự động resolve để không treo app
-                const timeout = setTimeout(() => {
-                    console.log("Scan timeout.");
-                    finishScan();
-                }, 3000);
-
-                const finishScan = () => {
-                    clearTimeout(timeout);
-                    // Lọc bỏ các vị trí null (các ảnh không tồn tại)
-                    loadedPhotoTextures = foundImages.filter(t => t !== undefined && t !== null);
-                    
-                    // FALLBACK: Nếu không tìm thấy ảnh nào trong folder, dùng ảnh mẫu online
-                    if (loadedPhotoTextures.length === 0) {
-                        console.log("No local images found. Using online placeholders.");
-                        const placeholders = [
-                            'https://picsum.photos/400/400?random=1',
-                            'https://picsum.photos/400/400?random=2',
-                            'https://picsum.photos/400/400?random=3',
-                            'https://picsum.photos/400/400?random=4',
-                            'https://picsum.photos/400/400?random=5'
-                        ];
-                        placeholders.forEach(url => loadedPhotoTextures.push(loader.load(url)));
-                    } else {
-                        console.log(`Found ${loadedPhotoTextures.length} images in '${folderPath}'.`);
+                const tryLoadImage = (index) => {
+                    // Điều kiện dừng: Quét quá 50 ảnh HOẶC lỗi liên tiếp 3 lần
+                    if (index > maxImagesToCheck || consecutiveErrors >= 3) {
+                        if (pendingImages === 0) finishScan();
+                        return;
                     }
-                    resolve();
+                    pendingImages++;
+                    let extIndex = 0;
+                    
+                    // Thử từng đuôi file cho 1 số thứ tự (ví dụ: thử 1.jpg, rồi 1.png...)
+                    const attemptLoad = () => {
+                        if (extIndex >= extensions.length) {
+                            // Hết đuôi mà không thấy -> Coi như không có ảnh số này
+                            pendingImages--;
+                            consecutiveErrors++;
+                            tryLoadImage(index + 1); // Thử ảnh tiếp theo
+                            return;
+                        }
+                        const currentExt = extensions[extIndex];
+                        const img = new Image();
+                        const fileName = `${folderPath}${index}${currentExt}`;
+
+                        img.onload = () => {
+                            pendingImages--;
+                            consecutiveErrors = 0; // Reset lỗi vì tìm thấy ảnh
+                            const aspect = img.width / img.height;
+                            const texture = new THREE.CanvasTexture(img);
+                            console.log(`Loaded: ${fileName}`);
+                            loadedPhotos.push({ index: index, texture: texture, aspect: aspect });
+                            tryLoadImage(index + 1); // Tìm ảnh tiếp theo
+                        };
+                        img.onerror = () => {
+                            extIndex++;
+                            attemptLoad(); // Thử đuôi khác
+                        };
+                        img.src = fileName;
+                    };
+                    attemptLoad();
                 };
 
-                for (let i = 1; i <= maxImagesToCheck; i++) {
-                    const img = new Image();
-                    img.onload = () => {
-                        // Ảnh tồn tại -> Tạo texture
-                        const texture = new THREE.CanvasTexture(img);
-                        foundImages[i-1] = texture; // Lưu đúng vị trí index
-                        completedChecks++;
-                        if (completedChecks === maxImagesToCheck) finishScan();
-                    };
-                    img.onerror = () => {
-                        // Ảnh không tồn tại
-                        foundImages[i-1] = null;
-                        completedChecks++;
-                        if (completedChecks === maxImagesToCheck) finishScan();
-                    };
-                    img.src = `${folderPath}${i}.jpg`; // Giả định đuôi .jpg
-                }
+                const finishScan = () => {
+                    loadedPhotos.sort((a, b) => a.index - b.index);
+                    
+                    if (loadedPhotos.length === 0) {
+                        // KHÔNG TÌM THẤY ẢNH -> HIỆN LỖI, KHÔNG CHẠY TIẾP
+                        const errDiv = document.getElementById('error-msg');
+                        const startBtn = document.getElementById('btnStart');
+                        const loadingText = document.querySelector('#loading small');
+                        
+                        // Ẩn text loading
+                        if(loadingText) loadingText.style.display = 'none';
+                        startBtn.style.display = 'none'; // Ẩn nút start
+
+                        errDiv.style.display = 'block';
+                        errDiv.innerHTML = `
+                            ⚠️ KHÔNG TÌM THẤY ẢNH NÀO!<br><br>
+                            Vui lòng kiểm tra lại:<br>
+                            1. Thư mục tên là <b>"image"</b> (nằm cùng file html).<br>
+                            2. Tên ảnh phải là số: <b>1.jpg, 2.jpg...</b><br>
+                            3. Nếu chạy trên máy tính, hãy dùng <b>Live Server</b> (VS Code).<br>
+                            (Trình duyệt chặn file local nếu mở trực tiếp)
+                        `;
+                    } else {
+                        // Tìm thấy ảnh -> OK
+                        resolve();
+                    }
+                };
+                tryLoadImage(1); // Bắt đầu từ số 1
             });
         }
 
@@ -187,23 +218,18 @@
 
             if (type === 'gold_glow') {
                 const grd = ctx.createRadialGradient(cx, cy, 2, cx, cy, 30);
-                grd.addColorStop(0, '#FFFBE6'); 
-                grd.addColorStop(0.4, '#FDD835'); 
-                grd.addColorStop(1, 'rgba(0,0,0,0)');
+                grd.addColorStop(0, '#FFFBE6'); grd.addColorStop(0.4, '#FDD835'); grd.addColorStop(1, 'rgba(0,0,0,0)');
                 ctx.fillStyle = grd; ctx.fillRect(0,0,64,64);
             } else if (type === 'red_light') {
                 const grd = ctx.createRadialGradient(cx, cy, 2, cx, cy, 30);
-                grd.addColorStop(0, '#FFEBEE'); 
-                grd.addColorStop(0.4, '#E53935'); 
-                grd.addColorStop(1, 'rgba(0,0,0,0)');
+                grd.addColorStop(0, '#FFEBEE'); grd.addColorStop(0.4, '#E53935'); grd.addColorStop(1, 'rgba(0,0,0,0)');
                 ctx.fillStyle = grd; ctx.fillRect(0,0,64,64);
             } else if (type === 'gift') {
                 ctx.fillStyle = '#C62828'; ctx.fillRect(12, 12, 40, 40);
                 ctx.fillStyle = '#FFD700'; ctx.fillRect(28, 12, 8, 40); ctx.fillRect(12, 28, 40, 8);
             } else if (type === 'snow') {
                 const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 30);
-                grd.addColorStop(0, 'rgba(255,255,255,0.9)');
-                grd.addColorStop(1, 'rgba(255,255,255,0)');
+                grd.addColorStop(0, 'rgba(255,255,255,0.9)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
                 ctx.fillStyle = grd; ctx.fillRect(0,0,64,64);
             } else if (type === 'cursor') {
                 ctx.beginPath();
@@ -241,6 +267,8 @@
 
         function init3D() {
             const container = document.getElementById('canvas-container');
+            container.innerHTML = ''; 
+            
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x050505);
             scene.fog = new THREE.FogExp2(0x050505, 0.002);
@@ -257,9 +285,7 @@
 
             const renderScene = new THREE.RenderPass(scene, camera);
             const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 0.2; 
-            bloomPass.strength = 0.8;  
-            bloomPass.radius = 0.5;
+            bloomPass.threshold = 0.2; bloomPass.strength = 0.8; bloomPass.radius = 0.5;
 
             composer = new THREE.EffectComposer(renderer);
             composer.addPass(renderScene);
@@ -269,10 +295,7 @@
             groupRed = createParticleSystem('red', CONFIG.redCount, 3.8); 
             groupGift = createParticleSystem('gift', CONFIG.giftCount, 3.5); 
             createSnow();
-            
-            // TẠO MESH ẢNH TỪ LIST ĐÃ SCAN
             createPhotos();
-            
             createDecorations();
             createCursor();
 
@@ -294,16 +317,15 @@
             if (isHandDetected) {
                 const vec = new THREE.Vector3();
                 const pos = new THREE.Vector3();
-                // Logic map tọa độ cho camera góc rộng 16:9
                 vec.set((handX * 2) - 1, -(handY * 2) + 1, 0.5);
                 vec.unproject(camera);
                 vec.sub(camera.position).normalize();
                 
-                const targetZ = 40;
+                const targetZ = 40; 
                 const distanceToTarget = (targetZ - camera.position.z) / vec.z;
                 pos.copy(camera.position).add(vec.multiplyScalar(distanceToTarget));
                 
-                cursorMesh.position.lerp(pos, 0.2);
+                cursorMesh.position.lerp(pos, 0.3);
                 cursorMesh.material.opacity = THREE.MathUtils.lerp(cursorMesh.material.opacity, 0.8, 0.1);
                 
                 if (state === 'TREE') cursorMesh.material.color.setHex(0xFFD700); 
@@ -365,15 +387,27 @@
         }
 
         function createPhotos() {
-            const geo = new THREE.PlaneGeometry(8, 8);
-            const borderGeo = new THREE.PlaneGeometry(8.6, 8.6);
-            const borderMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
+            const baseHeight = 8; 
+            photoMeshes = []; // Reset mảng mesh
             
-            // Loop dựa trên số lượng ảnh thực tế đã scan được
-            for(let i=0; i < loadedPhotoTextures.length; i++) {
-                const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: loadedPhotoTextures[i], side: THREE.DoubleSide }));
-                const border = new THREE.Mesh(borderGeo, borderMat); border.position.z = -0.1; mesh.add(border);
-                mesh.visible=false; scene.add(mesh); photoMeshes.push(mesh);
+            for(let i=0; i < loadedPhotos.length; i++) {
+                const photoData = loadedPhotos[i];
+                const width = baseHeight * photoData.aspect;
+                
+                const geo = new THREE.PlaneGeometry(width, baseHeight);
+                const borderGeo = new THREE.PlaneGeometry(width + 0.6, baseHeight + 0.6); 
+                const borderMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
+                
+                const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: photoData.texture, side: THREE.DoubleSide }));
+                const border = new THREE.Mesh(borderGeo, borderMat); 
+                border.position.z = -0.1; 
+                mesh.add(border);
+                
+                mesh.userData = { originalScale: new THREE.Vector3(1, 1, 1), aspect: photoData.aspect };
+
+                mesh.visible = false; 
+                scene.add(mesh); 
+                photoMeshes.push(mesh);
             }
         }
 
@@ -407,8 +441,10 @@
             const ud = group.geometry.userData;
             const target = (state==='TREE') ? ud.tree : (state==='HEART'? ud.heart : ud.explode);
             
-            const targetRotY = (handX - 0.5) * 3;
-            group.rotation.y += (targetRotY - group.rotation.y) * 0.05;
+            // Xoay nhẹ tự động
+            if (state === 'EXPLODE') group.rotation.y += 0.002;
+            else if (state === 'TREE') group.rotation.y += 0.005;
+            else group.rotation.y += 0.002;
 
             for(let i=0; i<pos.length; i++) {
                 pos[i] += (target[i] - pos[i]) * speed;
@@ -419,7 +455,6 @@
                 let bright = 1.0;
                 if(state==='TREE') bright = 0.8 + 0.4*Math.sin(time*(type==='gold'?3:5) + ud.phases[i]);
                 else if(state==='HEART') bright = 1.2;
-                
                 colors[i*3] = ud.baseColor.r * bright;
                 colors[i*3+1] = ud.baseColor.g * bright;
                 colors[i*3+2] = ud.baseColor.b * bright;
@@ -450,48 +485,63 @@
             starMesh.visible = (state === 'TREE');
             loveMesh.visible = (state === 'HEART');
             
-            // --- LOGIC VÒNG TRÒN ẢNH ĐỘNG (Dynamic Photo Circle) ---
             if (state === 'EXPLODE' || state === 'PHOTO') {
                 const totalPhotos = photoMeshes.length;
                 if (totalPhotos > 0) {
                     const step = (Math.PI * 2) / totalPhotos;
-                    
-                    // Logic mở rộng bán kính: Mặc định 35, nếu nhiều ảnh hơn 10 thì tự động cộng thêm
                     const baseRadius = 35; 
                     const dynamicRadius = totalPhotos > 8 ? baseRadius + (totalPhotos - 8) * 2.5 : baseRadius;
 
+                    let closestIdx = -1;
+                    let minDist = 9999;
+
                     photoMeshes.forEach((m, i) => {
                         m.visible = true;
+
                         if(state === 'EXPLODE') {
                             const angle = groupGold.rotation.y + i*step;
                             
-                            // Tính toán scale: Nếu quá nhiều ảnh thì thu nhỏ lại xíu để vừa mắt
-                            const scaleVal = totalPhotos > 15 ? 0.8 : 1.0;
-
-                            m.position.lerp(new THREE.Vector3(
+                            const targetPos = new THREE.Vector3(
                                 Math.sin(angle) * dynamicRadius, 
                                 Math.sin(time + i) * 2, 
                                 Math.cos(angle) * dynamicRadius
-                            ), 0.1);
+                            );
                             
-                            m.scale.lerp(new THREE.Vector3(scaleVal, scaleVal, scaleVal), 0.1);
+                            m.position.lerp(targetPos, 0.1);
                             m.lookAt(camera.position);
-                        } else {
-                            // PHOTO mode (Zoom)
+
+                            const dist = cursorMesh.position.distanceTo(m.position);
+                            if (dist < minDist) {
+                                minDist = dist;
+                                closestIdx = i;
+                            }
+                        } 
+                        
+                        if (state === 'PHOTO') {
                             if(i === selectedIndex) {
                                 m.position.lerp(new THREE.Vector3(0,0,60), 0.1);
-                                m.scale.lerp(new THREE.Vector3(5,5,5), 0.1);
+                                m.scale.lerp(new THREE.Vector3(5, 5, 5), 0.1);
                                 m.rotation.set(0,0,0);
                             } else {
                                 m.scale.lerp(new THREE.Vector3(0,0,0), 0.1);
                             }
+                        } else {
+                            let targetScale = 1.0;
+                            if (i === closestIdx) {
+                                targetScale = 1.3;
+                                m.children[0].material.color.setHex(0xFFFFFF);
+                            } else {
+                                targetScale = (totalPhotos > 15 ? 0.8 : 1.0);
+                                m.children[0].material.color.setHex(0xFFD700); 
+                            }
+                            
+                            const finalScale = m.userData.originalScale.clone().multiplyScalar(targetScale);
+                            m.scale.lerp(finalScale, 0.2);
                         }
                     });
-                    
-                    if(state === 'EXPLODE') {
-                        let rot = groupGold.rotation.y % (Math.PI*2);
-                        if(rot<0) rot += Math.PI*2;
-                        selectedIndex = Math.floor((totalPhotos - (rot / (Math.PI*2)) * totalPhotos)) % totalPhotos;
+
+                    if (state !== 'PHOTO' && closestIdx !== -1) {
+                        selectedIndex = closestIdx;
                     }
                 }
             } else {
@@ -510,66 +560,65 @@
             loading.style.display = 'block';
 
             try {
-                // BƯỚC QUAN TRỌNG: Quét folder ảnh trước khi chạy
                 await scanImages();
 
-                await bgMusic.play();
-                init3D();
-                
-                const video = document.getElementsByClassName('input_video')[0];
-                const canvas = document.getElementById('camera-preview');
-                const ctx = canvas.getContext('2d');
-                
-                const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-                hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-                
-                const PREVIEW_WIDTH = 240;
-                const PREVIEW_HEIGHT = 135;
+                // Nếu không tìm thấy ảnh thì đã hiện lỗi và dừng, không chạy tiếp đoạn này
+                if (loadedPhotos.length > 0) {
+                    await bgMusic.play();
+                    init3D();
+                    
+                    const video = document.getElementsByClassName('input_video')[0];
+                    const canvas = document.getElementById('camera-preview');
+                    const ctx = canvas.getContext('2d');
+                    
+                    const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+                    hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+                    
+                    const PREVIEW_WIDTH = 240;
+                    const PREVIEW_HEIGHT = 135;
 
-                hands.onResults(results => {
-                    ctx.clearRect(0,0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
-                    ctx.drawImage(results.image, 0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
+                    hands.onResults(results => {
+                        ctx.clearRect(0,0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
+                        ctx.drawImage(results.image, 0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
 
-                    if (results.multiHandLandmarks.length > 0) {
-                        isHandDetected = true;
-                        const lm = results.multiHandLandmarks[0];
-                        
-                        // --- SỬA CAM BỊ NGƯỢC ---
-                        // Đảo ngược handX (1 - x) để khớp với chế độ gương (mirror mode) của camera preview
-                        handX = 1 - lm[9].x; 
-                        handY = lm[9].y; 
+                        if (results.multiHandLandmarks.length > 0) {
+                            isHandDetected = true;
+                            const lm = results.multiHandLandmarks[0];
+                            
+                            handX = 1 - lm[9].x; 
+                            handY = lm[9].y; 
 
-                        const tips = [8,12,16,20]; const wrist = lm[0];
-                        let openDist = 0; tips.forEach(i => openDist += Math.hypot(lm[i].x-wrist.x, lm[i].y-wrist.y));
-                        const avgDist = openDist / 4;
-                        const pinchDist = Math.hypot(lm[4].x-lm[8].x, lm[4].y-lm[8].y);
+                            const tips = [8,12,16,20]; const wrist = lm[0];
+                            let openDist = 0; tips.forEach(i => openDist += Math.hypot(lm[i].x-wrist.x, lm[i].y-wrist.y));
+                            const avgDist = openDist / 4;
+                            const pinchDist = Math.hypot(lm[4].x-lm[8].x, lm[4].y-lm[8].y);
 
-                        if (results.multiHandLandmarks.length === 2) {
-                            const h2 = results.multiHandLandmarks[1];
-                            const distInd = Math.hypot(lm[8].x - h2[8].x, lm[8].y - h2[8].y);
-                            if (distInd < 0.1) { state = 'HEART'; return; }
+                            if (results.multiHandLandmarks.length === 2) {
+                                const h2 = results.multiHandLandmarks[1];
+                                const distInd = Math.hypot(lm[8].x - h2[8].x, lm[8].y - h2[8].y);
+                                if (distInd < 0.1) { state = 'HEART'; return; }
+                            }
+
+                            if (avgDist < 0.25) state = 'TREE'; 
+                            else if (pinchDist < 0.05) state = 'PHOTO'; 
+                            else state = 'EXPLODE'; 
+
+                        } else {
+                            isHandDetected = false;
+                            state = 'TREE'; 
                         }
+                    });
 
-                        if (avgDist < 0.25) state = 'TREE'; 
-                        else if (pinchDist < 0.05) state = 'PHOTO'; 
-                        else state = 'EXPLODE'; 
-
-                    } else {
-                        isHandDetected = false;
-                        state = 'TREE'; 
-                    }
-                });
-
-                // Camera Wide 16:9
-                const cameraUtils = new Camera(video, {
-                    onFrame: async () => { await hands.send({image: video}); }, 
-                    width: 1280, 
-                    height: 720
-                });
-                await cameraUtils.start();
-                
-                loading.style.display = 'none';
-                document.getElementById('ui-layer').style.bottom = '30px'; 
+                    const cameraUtils = new Camera(video, {
+                        onFrame: async () => { await hands.send({image: video}); }, 
+                        width: 1280, 
+                        height: 720
+                    });
+                    await cameraUtils.start();
+                    
+                    loading.style.display = 'none';
+                    document.getElementById('ui-layer').style.bottom = '30px'; 
+                }
 
             } catch (e) {
                 console.error(e);
