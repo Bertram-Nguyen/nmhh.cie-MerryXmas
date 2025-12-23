@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magic Christmas - Decoupled Interaction</title>
+    <title>Magic Christmas - Multi Input</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,15 +25,17 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <style>
-        body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Montserrat', sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Montserrat', sans-serif; user-select: none; }
         #canvas-container { width: 100%; height: 100vh; display: block; }
         
+        /* UI Layer chung */
         #ui-layer {
-            position: absolute; bottom: 40px; left: 50%; 
+            position: absolute; bottom: 30px; left: 50%; 
             transform: translateX(-50%);
             width: 90%; max-width: 800px;
             text-align: center; pointer-events: none; z-index: 100;
-            display: flex; flex-direction: column; align-items: center; gap: 20px;
+            display: none; /* Ẩn mặc định, hiện khi vào game */
+            flex-direction: column; align-items: center; gap: 15px;
         }
         
         .guide-box { 
@@ -41,53 +43,74 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
-            padding: 15px 30px;
-            display: flex; gap: 30px; justify-content: center; flex-wrap: wrap;
+            padding: 10px 20px;
+            display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            transition: opacity 0.5s;
         }
 
         .guide-item {
-            display: flex; flex-direction: column; align-items: center; gap: 5px;
-            color: rgba(255, 255, 255, 0.9); font-size: 12px; letter-spacing: 1px;
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
+            color: rgba(255, 255, 255, 0.9); font-size: 10px; letter-spacing: 1px;
         }
-        .guide-item span { font-size: 24px; }
+        .guide-item span { font-size: 20px; }
         .guide-item b { color: #FFD700; font-weight: 600; }
 
-        button {
-            pointer-events: auto; cursor: pointer;
+        /* Màn hình Intro/Loading */
+        #intro-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #1a0505 0%, #000000 100%);
+            z-index: 200; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; text-align: center;
+        }
+        
+        #loading-text {
+            color: #FFD700; font-size: 24px; font-weight: 300; letter-spacing: 4px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        
+        #error-msg {
+            color: #FF5252; font-weight: bold; margin-top: 15px; display: none; font-size: 14px;
+            background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; border: 1px solid #FF5252;
+            max-width: 80%;
+        }
+
+        /* Nút chọn chế độ */
+        .mode-btn {
             background: linear-gradient(135deg, #D32F2F, #8B0000); 
-            color: #FFF; border: none;
-            padding: 16px 60px; border-radius: 50px; 
-            font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 18px;
+            color: #FFF; border: 1px solid #FFD700;
+            padding: 20px 40px; border-radius: 50px; 
+            font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 16px;
             box-shadow: 0 0 20px rgba(211, 47, 47, 0.4);
             transition: all 0.3s ease;
             text-transform: uppercase; letter-spacing: 2px;
+            margin: 10px; cursor: pointer; display: none; /* Ẩn cho đến khi load xong */
+            width: 280px;
         }
-        button:hover { transform: scale(1.05); box-shadow: 0 0 40px rgba(211, 47, 47, 0.7); }
-        button:active { transform: scale(0.95); }
+        .mode-btn:hover { transform: scale(1.05); box-shadow: 0 0 40px rgba(211, 47, 47, 0.7); }
+        .mode-btn i { font-size: 24px; display: block; margin-bottom: 5px; }
+
+        /* Nút Heart cho chế độ Touch */
+        #heart-btn {
+            pointer-events: auto; cursor: pointer;
+            background: rgba(255, 105, 180, 0.2);
+            border: 2px solid #FF69B4; color: #FF69B4;
+            width: 60px; height: 60px; border-radius: 50%;
+            font-size: 30px; display: none; /* Chỉ hiện ở chế độ Mouse/Touch */
+            align-items: center; justify-content: center;
+            box-shadow: 0 0 20px rgba(255, 105, 180, 0.4);
+            margin-top: 10px;
+        }
+        #heart-btn:active { transform: scale(0.9); background: rgba(255, 105, 180, 0.5); }
 
         #camera-preview {
             position: absolute; top: 20px; right: 20px;
-            width: 240px; height: 135px; /* Tỷ lệ 16:9 */
+            width: 200px; height: 112px; /* Tỷ lệ 16:9 */
             border-radius: 12px;
             border: 2px solid rgba(255, 215, 0, 0.3);
             transform: scaleX(-1); opacity: 0.9;
             box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-            z-index: 90;
-        }
-        
-        #loading {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            color: white; font-size: 20px; font-weight: 300; letter-spacing: 4px;
-            display: none; pointer-events: none;
-            text-align: center;
-        }
-        #loading small { font-size: 14px; opacity: 0.7; display: block; margin-top: 10px; color: #FFD700;}
-        #error-msg {
-            color: #FF5252; font-weight: bold; margin-top: 15px; display: none; font-size: 16px;
-            background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; border: 1px solid #FF5252;
-            line-height: 1.6;
+            z-index: 90; display: none;
         }
 
         #copyright {
@@ -98,20 +121,31 @@
     </style>
 </head>
 <body>
-    <div id="loading">
-        SCANNING LOCAL PHOTOS...
-        <small>Searching for 1.jpg, 2.jpg in "image" folder...</small>
+
+    <!-- Màn hình khởi động & Chọn chế độ -->
+    <div id="intro-screen">
+        <div id="loading-text">INITIALIZING MAGIC...</div>
         <div id="error-msg"></div>
+        
+        <div id="mode-selection" style="display:none; flex-direction:column; align-items:center;">
+            <button class="mode-btn" onclick="startApp('camera')" style="display:block">
+                📷 Camera Control<br><span style="font-size:10px; opacity:0.7">Hand Tracking (PC)</span>
+            </button>
+            <button class="mode-btn" onclick="startApp('mouse')" style="display:block">
+                👆 Touch / Mouse<br><span style="font-size:10px; opacity:0.7">For Mobile / No Webcam</span>
+            </button>
+        </div>
     </div>
 
+    <!-- Giao diện trong game -->
     <div id="ui-layer">
         <div class="guide-box" id="guideBar">
-            <div class="guide-item"><span>🖐</span><b>OPEN</b><div>Gallery</div></div>
-            <div class="guide-item"><span>✊</span><b>FIST</b><div>Tree</div></div>
-            <div class="guide-item"><span>🫶</span><b>HEART</b><div>Love</div></div>
-            <div class="guide-item"><span>👌</span><b>PINCH</b><div>Zoom</div></div>
+            <div class="guide-item" id="guide-move"><span>🖐</span><b>MOVE</b><div>Explore</div></div>
+            <div class="guide-item" id="guide-stop"><span>✊</span><b>STOP</b><div>Tree</div></div>
+            <div class="guide-item" id="guide-click"><span>👌</span><b>CLICK</b><div>Zoom</div></div>
         </div>
-        <button id="btnStart" onclick="startSystem()">Start Magic</button>
+        <!-- Nút tim cho chế độ Touch -->
+        <button id="heart-btn" onclick="toggleHeart()">❤️</button>
     </div>
 
     <div id="copyright">© 2025 Magic Christmas</div>
@@ -127,8 +161,9 @@
 
         const loader = new THREE.TextureLoader();
         let loadedPhotos = []; 
+        let inputMode = 'none'; // 'camera' hoặc 'mouse'
 
-        // --- SCAN IMAGES ---
+        // --- 1. SCAN ẢNH ---
         function scanImages() {
             return new Promise((resolve) => {
                 const maxImagesToCheck = 50;
@@ -148,28 +183,22 @@
                     
                     const attemptLoad = () => {
                         if (extIndex >= extensions.length) {
-                            pendingImages--;
-                            consecutiveErrors++;
-                            tryLoadImage(index + 1);
-                            return;
+                            pendingImages--; consecutiveErrors++;
+                            tryLoadImage(index + 1); return;
                         }
                         const currentExt = extensions[extIndex];
                         const img = new Image();
                         const fileName = `${folderPath}${index}${currentExt}`;
 
                         img.onload = () => {
-                            pendingImages--;
-                            consecutiveErrors = 0;
+                            pendingImages--; consecutiveErrors = 0;
                             const aspect = img.width / img.height;
                             const texture = new THREE.CanvasTexture(img);
                             console.log(`Loaded: ${fileName}`);
                             loadedPhotos.push({ index: index, texture: texture, aspect: aspect });
                             tryLoadImage(index + 1); 
                         };
-                        img.onerror = () => {
-                            extIndex++;
-                            attemptLoad();
-                        };
+                        img.onerror = () => { extIndex++; attemptLoad(); };
                         img.src = fileName;
                     };
                     attemptLoad();
@@ -177,25 +206,17 @@
 
                 const finishScan = () => {
                     loadedPhotos.sort((a, b) => a.index - b.index);
-                    
-                    if (loadedPhotos.length === 0) {
-                        const errDiv = document.getElementById('error-msg');
-                        const startBtn = document.getElementById('btnStart');
-                        const loadingText = document.querySelector('#loading small');
-                        
-                        if(loadingText) loadingText.style.display = 'none';
-                        startBtn.style.display = 'none'; 
+                    const loadingText = document.getElementById('loading-text');
+                    const errDiv = document.getElementById('error-msg');
+                    const modeSel = document.getElementById('mode-selection');
 
+                    if (loadedPhotos.length === 0) {
+                        loadingText.style.display = 'none';
                         errDiv.style.display = 'block';
-                        errDiv.innerHTML = `
-                            ⚠️ KHÔNG TÌM THẤY ẢNH NÀO!<br><br>
-                            Vui lòng kiểm tra lại:<br>
-                            1. Thư mục tên là <b>"image"</b> (nằm cùng file html).<br>
-                            2. Tên ảnh phải là số: <b>1.jpg, 2.jpg...</b><br>
-                            3. Nếu chạy trên máy tính, hãy dùng <b>Live Server</b> (VS Code).<br>
-                            (Trình duyệt chặn file local nếu mở trực tiếp)
-                        `;
+                        errDiv.innerHTML = `⚠️ KHÔNG TÌM THẤY ẢNH NÀO!<br>Kiểm tra folder 'image' và tên file (1.jpg, 2.jpg...).`;
                     } else {
+                        loadingText.innerHTML = "SELECT CONTROL MODE";
+                        modeSel.style.display = 'flex';
                         resolve();
                     }
                 };
@@ -203,6 +224,7 @@
             });
         }
 
+        // --- 2. TEXTURE & CONFIG ---
         function createCustomTexture(type) {
             const canvas = document.createElement('canvas');
             canvas.width = 64; canvas.height = 64;
@@ -255,11 +277,12 @@
         
         let state = 'TREE'; 
         let selectedIndex = 0;
-        // Biến kiểm tra xem tay có đang hover vào ảnh nào không
         let isHoveringPhoto = false; 
         let handX = 0.5, handY = 0.5;
         let isHandDetected = false;
+        let idleTimer = null; // Timer cho mouse mode
 
+        // --- 3. INIT 3D ---
         function init3D() {
             const container = document.getElementById('canvas-container');
             container.innerHTML = ''; 
@@ -297,39 +320,12 @@
             animate();
         }
 
+        // --- 4. OBJECT CREATION ---
         function createCursor() {
-            const mat = new THREE.SpriteMaterial({ 
-                map: textures.cursor, 
-                color: 0xffffff, 
-                transparent: true, opacity: 0 
-            });
+            const mat = new THREE.SpriteMaterial({ map: textures.cursor, color: 0xffffff, transparent: true, opacity: 0 });
             cursorMesh = new THREE.Sprite(mat);
             cursorMesh.scale.set(8, 8, 1);
             scene.add(cursorMesh);
-        }
-
-        function updateCursor() {
-            if (isHandDetected) {
-                const vec = new THREE.Vector3();
-                const pos = new THREE.Vector3();
-                vec.set((handX * 2) - 1, -(handY * 2) + 1, 0.5);
-                vec.unproject(camera);
-                vec.sub(camera.position).normalize();
-                
-                const targetZ = 40; 
-                const distanceToTarget = (targetZ - camera.position.z) / vec.z;
-                pos.copy(camera.position).add(vec.multiplyScalar(distanceToTarget));
-                
-                cursorMesh.position.lerp(pos, 0.3);
-                cursorMesh.material.opacity = THREE.MathUtils.lerp(cursorMesh.material.opacity, 0.8, 0.1);
-                
-                if (state === 'TREE') cursorMesh.material.color.setHex(0xFFD700); 
-                else if (state === 'HEART') cursorMesh.material.color.setHex(0xFF69B4); 
-                else cursorMesh.material.color.setHex(0xFFFFFF); 
-
-            } else {
-                cursorMesh.material.opacity = THREE.MathUtils.lerp(cursorMesh.material.opacity, 0, 0.1);
-            }
         }
 
         function createSnow() {
@@ -382,27 +378,17 @@
         }
 
         function createPhotos() {
-            const baseHeight = 8; 
-            photoMeshes = []; 
-            
+            const baseHeight = 8; photoMeshes = []; 
             for(let i=0; i < loadedPhotos.length; i++) {
                 const photoData = loadedPhotos[i];
                 const width = baseHeight * photoData.aspect;
-                
                 const geo = new THREE.PlaneGeometry(width, baseHeight);
                 const borderGeo = new THREE.PlaneGeometry(width + 0.6, baseHeight + 0.6); 
                 const borderMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
-                
                 const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: photoData.texture, side: THREE.DoubleSide }));
-                const border = new THREE.Mesh(borderGeo, borderMat); 
-                border.position.z = -0.1; 
-                mesh.add(border);
-                
+                const border = new THREE.Mesh(borderGeo, borderMat); border.position.z = -0.1; mesh.add(border);
                 mesh.userData = { originalScale: new THREE.Vector3(1, 1, 1), aspect: photoData.aspect };
-
-                mesh.visible = false; 
-                scene.add(mesh); 
-                photoMeshes.push(mesh);
+                mesh.visible = false; scene.add(mesh); photoMeshes.push(mesh);
             }
         }
 
@@ -430,37 +416,51 @@
             starMesh.position.set(0, CONFIG.treeHeight/2+2, 0); scene.add(starMesh);
         }
 
+        // --- 5. LOGIC UPDATE ---
+        function updateCursor() {
+            if (isHandDetected) {
+                const vec = new THREE.Vector3(); const pos = new THREE.Vector3();
+                // Map handX, handY (0-1) to 3D space
+                const xMap = (inputMode === 'camera') ? (handX * 2) - 1 : (handX * 2) - 1; // Camera đã flip ở logic hand rồi
+                vec.set(xMap, -(handY * 2) + 1, 0.5);
+                vec.unproject(camera);
+                vec.sub(camera.position).normalize();
+                const targetZ = 40; 
+                const distanceToTarget = (targetZ - camera.position.z) / vec.z;
+                pos.copy(camera.position).add(vec.multiplyScalar(distanceToTarget));
+                
+                cursorMesh.position.lerp(pos, 0.3);
+                cursorMesh.material.opacity = THREE.MathUtils.lerp(cursorMesh.material.opacity, 0.8, 0.1);
+                
+                if (state === 'TREE') cursorMesh.material.color.setHex(0xFFD700); 
+                else if (state === 'HEART') cursorMesh.material.color.setHex(0xFF69B4); 
+                else cursorMesh.material.color.setHex(0xFFFFFF); 
+            } else {
+                cursorMesh.material.opacity = THREE.MathUtils.lerp(cursorMesh.material.opacity, 0, 0.1);
+            }
+        }
+
         function updateParticles(group, type, time, speed) {
             const pos = group.geometry.attributes.position.array;
             const colors = group.geometry.attributes.color.array;
             const ud = group.geometry.userData;
             const target = (state==='TREE') ? ud.tree : (state==='HEART'? ud.heart : ud.explode);
             
-            // --- FIX QUAN TRỌNG: Tách biệt hoàn toàn handX khỏi rotation ---
-            // Chỉ xoay tự động. Nếu đang hover vào ảnh thì DỪNG XOAY để dễ chọn.
-            if (state === 'EXPLODE' && !isHoveringPhoto) {
-                group.rotation.y += 0.0015; // Tốc độ xoay tự động
-            } else if (state === 'TREE') {
-                group.rotation.y += 0.005;
-            } else if (state === 'HEART') {
-                group.rotation.y = 0;
-            }
+            // Xoay tự động
+            if (state === 'EXPLODE' && !isHoveringPhoto) group.rotation.y += 0.0015;
+            else if (state === 'TREE') group.rotation.y += 0.005;
+            else if (state === 'HEART') group.rotation.y = 0;
 
-            for(let i=0; i<pos.length; i++) {
-                pos[i] += (target[i] - pos[i]) * speed;
-            }
+            for(let i=0; i<pos.length; i++) { pos[i] += (target[i] - pos[i]) * speed; }
             
             const count = pos.length/3;
             for(let i=0; i<count; i++) {
                 let bright = 1.0;
                 if(state==='TREE') bright = 0.8 + 0.4*Math.sin(time*(type==='gold'?3:5) + ud.phases[i]);
                 else if(state==='HEART') bright = 1.2;
-                colors[i*3] = ud.baseColor.r * bright;
-                colors[i*3+1] = ud.baseColor.g * bright;
-                colors[i*3+2] = ud.baseColor.b * bright;
+                colors[i*3] = ud.baseColor.r * bright; colors[i*3+1] = ud.baseColor.g * bright; colors[i*3+2] = ud.baseColor.b * bright;
             }
-            group.geometry.attributes.position.needsUpdate = true;
-            group.geometry.attributes.color.needsUpdate = true;
+            group.geometry.attributes.position.needsUpdate = true; group.geometry.attributes.color.needsUpdate = true;
         }
 
         function animate() {
@@ -475,12 +475,9 @@
             updateParticles(groupGold, 'gold', time, 0.08);
             updateParticles(groupRed, 'red', time, 0.08);
             updateParticles(groupGift, 'gift', time, 0.08);
-            
             if(groupSnow) {
                 const pos = groupSnow.geometry.attributes.position.array;
-                for(let i=1; i<pos.length; i+=3) {
-                    pos[i] -= 0.1; if(pos[i]<-60) pos[i]=80;
-                }
+                for(let i=1; i<pos.length; i+=3) { pos[i] -= 0.1; if(pos[i]<-60) pos[i]=80; }
                 groupSnow.geometry.attributes.position.needsUpdate=true;
             }
 
@@ -490,7 +487,7 @@
             starMesh.visible = (state === 'TREE');
             loveMesh.visible = (state === 'HEART');
             
-            isHoveringPhoto = false; // Reset hover state mỗi frame
+            isHoveringPhoto = false; 
 
             if (state === 'EXPLODE' || state === 'PHOTO') {
                 const totalPhotos = photoMeshes.length;
@@ -499,142 +496,150 @@
                     const baseRadius = 35; 
                     const dynamicRadius = totalPhotos > 8 ? baseRadius + (totalPhotos - 8) * 2.5 : baseRadius;
 
-                    let closestIdx = -1;
-                    let minDist = 9999;
+                    let closestIdx = -1; let minDist = 9999;
 
                     photoMeshes.forEach((m, i) => {
                         m.visible = true;
-
                         if(state === 'EXPLODE') {
                             const angle = groupGold.rotation.y + i*step;
-                            const targetPos = new THREE.Vector3(
-                                Math.sin(angle) * dynamicRadius, 
-                                Math.sin(time + i) * 2, 
-                                Math.cos(angle) * dynamicRadius
-                            );
-                            
-                            m.position.lerp(targetPos, 0.1);
-                            m.lookAt(camera.position);
-
+                            const targetPos = new THREE.Vector3(Math.sin(angle)*dynamicRadius, Math.sin(time+i)*2, Math.cos(angle)*dynamicRadius);
+                            m.position.lerp(targetPos, 0.1); m.lookAt(camera.position);
                             const dist = cursorMesh.position.distanceTo(m.position);
-                            // Nếu tay ở gần ảnh (< 12 đơn vị), coi như đang hover
                             if (dist < 12) {
-                                if(dist < minDist) {
-                                    minDist = dist;
-                                    closestIdx = i;
-                                }
-                                isHoveringPhoto = true; // Báo hiệu để dừng xoay
+                                if(dist < minDist) { minDist = dist; closestIdx = i; }
+                                isHoveringPhoto = true;
                             }
                         } 
-                        
                         if (state === 'PHOTO') {
                             if(i === selectedIndex) {
                                 m.position.lerp(new THREE.Vector3(0,0,60), 0.1);
                                 m.scale.lerp(new THREE.Vector3(5, 5, 5), 0.1);
                                 m.rotation.set(0,0,0);
-                            } else {
-                                m.scale.lerp(new THREE.Vector3(0,0,0), 0.1);
-                            }
+                            } else { m.scale.lerp(new THREE.Vector3(0,0,0), 0.1); }
                         } else {
-                            let targetScale = 1.0;
-                            // Hover Effect
-                            if (i === closestIdx) {
-                                targetScale = 1.3;
-                                m.children[0].material.color.setHex(0xFFFFFF); // Viền trắng
-                            } else {
-                                targetScale = (totalPhotos > 15 ? 0.8 : 1.0);
-                                m.children[0].material.color.setHex(0xFFD700); // Viền vàng
-                            }
-                            const finalScale = m.userData.originalScale.clone().multiplyScalar(targetScale);
-                            m.scale.lerp(finalScale, 0.2);
+                            let targetScale = (i === closestIdx) ? 1.3 : (totalPhotos > 15 ? 0.8 : 1.0);
+                            m.children[0].material.color.setHex(i===closestIdx ? 0xFFFFFF : 0xFFD700);
+                            m.scale.lerp(m.userData.originalScale.clone().multiplyScalar(targetScale), 0.2);
                         }
                     });
-
-                    if (state !== 'PHOTO' && closestIdx !== -1) {
-                        selectedIndex = closestIdx;
-                    }
+                    if (state !== 'PHOTO' && closestIdx !== -1) selectedIndex = closestIdx;
                 }
-            } else {
-                photoMeshes.forEach(m => m.visible = false);
-            }
+            } else { photoMeshes.forEach(m => m.visible = false); }
 
-            if(composer) composer.render();
-            else renderer.render(scene, camera);
+            if(composer) composer.render(); else renderer.render(scene, camera);
         }
 
-        async function startSystem() {
-            const btn = document.getElementById('btnStart');
-            const loading = document.getElementById('loading');
+        // --- 6. APP CONTROL FLOW ---
+        async function startApp(mode) {
+            inputMode = mode;
+            document.getElementById('intro-screen').style.display = 'none';
+            document.getElementById('ui-layer').style.display = 'flex';
             
-            btn.style.display = 'none';
-            loading.style.display = 'block';
-
             try {
-                await scanImages();
+                await bgMusic.play();
+            } catch(e) { console.log("Audio play failed, user gesture needed"); }
 
-                if (loadedPhotos.length > 0) {
-                    await bgMusic.play();
-                    init3D();
-                    
-                    const video = document.getElementsByClassName('input_video')[0];
-                    const canvas = document.getElementById('camera-preview');
-                    const ctx = canvas.getContext('2d');
-                    
-                    const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-                    hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-                    
-                    const PREVIEW_WIDTH = 240;
-                    const PREVIEW_HEIGHT = 135;
+            init3D();
 
-                    hands.onResults(results => {
-                        ctx.clearRect(0,0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
-                        ctx.drawImage(results.image, 0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
-
-                        if (results.multiHandLandmarks.length > 0) {
-                            isHandDetected = true;
-                            const lm = results.multiHandLandmarks[0];
-                            
-                            handX = 1 - lm[9].x; 
-                            handY = lm[9].y; 
-
-                            const tips = [8,12,16,20]; const wrist = lm[0];
-                            let openDist = 0; tips.forEach(i => openDist += Math.hypot(lm[i].x-wrist.x, lm[i].y-wrist.y));
-                            const avgDist = openDist / 4;
-                            const pinchDist = Math.hypot(lm[4].x-lm[8].x, lm[4].y-lm[8].y);
-
-                            if (results.multiHandLandmarks.length === 2) {
-                                const h2 = results.multiHandLandmarks[1];
-                                const distInd = Math.hypot(lm[8].x - h2[8].x, lm[8].y - h2[8].y);
-                                if (distInd < 0.1) { state = 'HEART'; return; }
-                            }
-
-                            if (avgDist < 0.25) state = 'TREE'; 
-                            else if (pinchDist < 0.05) state = 'PHOTO'; 
-                            else state = 'EXPLODE'; 
-
-                        } else {
-                            isHandDetected = false;
-                            state = 'TREE'; 
-                        }
-                    });
-
-                    const cameraUtils = new Camera(video, {
-                        onFrame: async () => { await hands.send({image: video}); }, 
-                        width: 1280, 
-                        height: 720
-                    });
-                    await cameraUtils.start();
-                    
-                    loading.style.display = 'none';
-                    document.getElementById('ui-layer').style.bottom = '30px'; 
-                }
-
-            } catch (e) {
-                console.error(e);
-                loading.innerText = "Error: " + e.message;
+            if (mode === 'camera') {
+                startCameraMode();
+            } else {
+                startMouseMode();
             }
+        }
+
+        // --- MOUSE / TOUCH MODE ---
+        function startMouseMode() {
+            // Hiển thị nút Heart
+            document.getElementById('heart-btn').style.display = 'flex';
+            
+            // Mouse Move / Touch Move
+            const onMove = (x, y) => {
+                isHandDetected = true;
+                // Chuẩn hóa tọa độ chuột sang 0..1
+                handX = x / window.innerWidth;
+                handY = y / window.innerHeight;
+                
+                // Nếu đang ở TREE và di chuyển -> Chuyển sang EXPLODE
+                if (state === 'TREE' || state === 'HEART') state = 'EXPLODE';
+                
+                // Reset Idle Timer (nếu dừng 3s thì về TREE)
+                if (idleTimer) clearTimeout(idleTimer);
+                idleTimer = setTimeout(() => {
+                    if(state === 'EXPLODE') state = 'TREE';
+                    isHandDetected = false;
+                }, 3000);
+            };
+
+            window.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+            window.addEventListener('touchmove', (e) => {
+                if(e.touches.length > 0) onMove(e.touches[0].clientX, e.touches[0].clientY);
+            });
+
+            // Click / Tap Logic
+            const onClick = () => {
+                if (state === 'PHOTO') {
+                    state = 'EXPLODE'; // Thu nhỏ
+                } else if (state === 'EXPLODE' && isHoveringPhoto) {
+                    state = 'PHOTO'; // Phóng to
+                }
+            };
+            window.addEventListener('mousedown', onClick);
+            window.addEventListener('touchstart', onClick);
+        }
+
+        function toggleHeart() {
+            state = (state === 'HEART') ? 'EXPLODE' : 'HEART';
+        }
+
+        // --- CAMERA MODE ---
+        async function startCameraMode() {
+            // Update UI Guide cho Camera
+            document.getElementById('heart-btn').style.display = 'none';
+            document.getElementById('camera-preview').style.display = 'block';
+
+            const video = document.getElementsByClassName('input_video')[0];
+            const canvas = document.getElementById('camera-preview');
+            const ctx = canvas.getContext('2d');
+            
+            const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+            hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+            
+            hands.onResults(results => {
+                ctx.clearRect(0,0, 200, 112); ctx.drawImage(results.image, 0, 0, 200, 112);
+
+                if (results.multiHandLandmarks.length > 0) {
+                    isHandDetected = true;
+                    const lm = results.multiHandLandmarks[0];
+                    handX = 1 - lm[9].x; handY = lm[9].y; // Flip X for mirror effect
+
+                    const tips = [8,12,16,20]; const wrist = lm[0];
+                    let openDist = 0; tips.forEach(i => openDist += Math.hypot(lm[i].x-wrist.x, lm[i].y-wrist.y));
+                    const avgDist = openDist / 4;
+                    const pinchDist = Math.hypot(lm[4].x-lm[8].x, lm[4].y-lm[8].y);
+
+                    if (results.multiHandLandmarks.length === 2) {
+                        const h2 = results.multiHandLandmarks[1];
+                        if (Math.hypot(lm[8].x - h2[8].x, lm[8].y - h2[8].y) < 0.1) { state = 'HEART'; return; }
+                    }
+
+                    if (avgDist < 0.25) state = 'TREE'; 
+                    else if (pinchDist < 0.05) state = 'PHOTO'; 
+                    else state = 'EXPLODE'; 
+                } else {
+                    isHandDetected = false; state = 'TREE'; 
+                }
+            });
+
+            const cameraUtils = new Camera(video, {
+                onFrame: async () => { await hands.send({image: video}); }, width: 1280, height: 720
+            });
+            await cameraUtils.start();
         }
         
+        // Auto run scan on load
+        scanImages();
+
         window.addEventListener('resize', () => {
             if(camera) {
                 camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix();
