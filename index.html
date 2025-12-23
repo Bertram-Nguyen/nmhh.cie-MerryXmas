@@ -424,7 +424,7 @@
             const c2 = document.createElement('canvas'); c2.width=1024; c2.height=256;
             const ctx2 = c2.getContext('2d');
             ctx2.font='bold 100px "Mountains of Christmas"'; ctx2.fillStyle='#FF69B4'; ctx2.textAlign='center';
-            ctx2.shadowColor="#FF1493"; ctx2.shadowBlur=20; ctx2.fillText("I Love You", 512, 130);
+            ctx2.shadowColor="#FF1493"; ctx2.shadowBlur=20; ctx2.fillText("Merry Hẹ Hẹ ♥", 512, 130);
             loveMesh = new THREE.Mesh(new THREE.PlaneGeometry(60,15), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c2), transparent:true, blending:THREE.AdditiveBlending }));
             loveMesh.position.set(0,0,20); loveMesh.visible=false; scene.add(loveMesh);
 
