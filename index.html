@@ -57,7 +57,6 @@
         .guide-item span { font-size: 22px; display: block; height: 30px; line-height: 30px;}
         .guide-item b { font-weight: 700; text-transform: uppercase; }
         
-        /* Active State Highlighting */
         .guide-item.active {
             color: #FFF; background: rgba(255, 215, 0, 0.2);
             transform: scale(1.1);
@@ -110,6 +109,16 @@
         }
         @keyframes pulse-btn { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
+        /* Nút Back (Thoát Mode) */
+        #back-btn {
+            position: absolute; top: 20px; left: 20px; z-index: 101;
+            background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #FFF; padding: 10px 20px; border-radius: 30px;
+            font-family: 'Montserrat', sans-serif; cursor: pointer;
+            transition: all 0.3s; display: none;
+        }
+        #back-btn:hover { background: rgba(255, 215, 0, 0.2); border-color: #FFD700; color: #FFD700; }
+
         #camera-preview {
             position: absolute; top: 20px; right: 20px;
             width: 240px; height: 135px; /* 16:9 */
@@ -147,6 +156,8 @@
     </div>
 
     <!-- IN-GAME UI -->
+    <button id="back-btn" onclick="exitToMenu()">🔙 MENU</button>
+    
     <div id="ui-layer">
         <div class="guide-box">
             <div class="guide-item" id="st-tree"><span>✊</span><b>TREE</b></div>
@@ -171,6 +182,7 @@
         const loader = new THREE.TextureLoader();
         let loadedPhotos = []; 
         let inputMode = 'none'; // 'camera' | 'mouse'
+        let cameraObj = null; // Store camera instance to stop it later
 
         // --- 1. SMART IMAGE SCANNING ---
         function scanImages() {
@@ -282,7 +294,7 @@
         let scene, camera, renderer, composer, bloomPass;
         let groupGold, groupRed, groupGift, groupSnow; 
         let photoMeshes = [];
-        let titleMesh, starMesh, loveMesh, cursorMesh;
+        let titleMesh, starMesh, loveMesh, cursorMesh; 
         
         let state = 'TREE'; 
         let selectedIndex = 0;
@@ -465,7 +477,7 @@
             const target = (state==='TREE') ? ud.tree : (state==='HEART'? ud.heart : ud.explode);
             
             // Decoupled Rotation Logic
-            if (state === 'EXPLODE' && !isHoveringPhoto) group.rotation.y += 0.0015;
+            if (state === 'EXPLODE' && !isHoveringPhoto) group.rotation.y += 0.004;
             else if (state === 'TREE') group.rotation.y += 0.005;
             else if (state === 'HEART') group.rotation.y = 0;
 
@@ -482,6 +494,8 @@
         }
 
         function animate() {
+            if (inputMode === 'none') return; // Stop animation loop if in menu
+
             requestAnimationFrame(animate);
             const time = Date.now() * 0.001;
             
@@ -519,13 +533,24 @@
 
                     let closestIdx = -1; let minDist = 9999;
 
+                    // Calculate cursor position in 3D space
+                    const vec = new THREE.Vector3(); const pos = new THREE.Vector3();
+                    // Map coordinates
+                    vec.set((handX * 2) - 1, -(handY * 2) + 1, 0.5);
+                    vec.unproject(camera);
+                    vec.sub(camera.position).normalize();
+                    const targetZ = 40; 
+                    const distanceToTarget = (targetZ - camera.position.z) / vec.z;
+                    pos.copy(camera.position).add(vec.multiplyScalar(distanceToTarget));
+
                     photoMeshes.forEach((m, i) => {
                         m.visible = true;
                         if(state === 'EXPLODE') {
                             const angle = groupGold.rotation.y + i*step;
                             const targetPos = new THREE.Vector3(Math.sin(angle)*dynamicRadius, Math.sin(time+i)*2, Math.cos(angle)*dynamicRadius);
                             m.position.lerp(targetPos, 0.1); m.lookAt(camera.position);
-                            const dist = cursorMesh.position.distanceTo(m.position);
+                            // Use calculated 'pos' instead of cursorMesh.position
+                            const dist = pos.distanceTo(m.position);
                             if (dist < 12) {
                                 if(dist < minDist) { minDist = dist; closestIdx = i; }
                                 isHoveringPhoto = true;
@@ -555,6 +580,7 @@
             inputMode = mode;
             document.getElementById('intro-screen').style.display = 'none';
             document.getElementById('ui-layer').style.display = 'flex';
+            document.getElementById('back-btn').style.display = 'block'; // Show back button
             
             try { await bgMusic.play(); } catch(e) { console.log("Audio autoplay blocked"); }
 
@@ -567,10 +593,40 @@
             }
         }
 
+        function exitToMenu() {
+            // Stop logic
+            inputMode = 'none';
+            
+            // Stop camera if running
+            if (cameraObj) {
+                // MediaPipe Camera stop is tricky, best to reload or just hide
+                // We will hide and stop processing frames in the callback
+                // Ideally, reload the page to be clean but that stops music
+                // Let's just reset UI
+                document.getElementById('camera-preview').style.display = 'none';
+            }
+
+            // Reset UI
+            document.getElementById('intro-screen').style.display = 'flex';
+            document.getElementById('ui-layer').style.display = 'none';
+            document.getElementById('back-btn').style.display = 'none';
+            document.getElementById('heart-btn').style.display = 'none';
+            document.getElementById('camera-preview').style.display = 'none';
+            
+            // Clear canvas
+            const container = document.getElementById('canvas-container');
+            container.innerHTML = '';
+            
+            // Reset State
+            state = 'TREE';
+            isHandDetected = false;
+        }
+
         function startMouseMode() {
             document.getElementById('heart-btn').style.display = 'flex';
             
             const onMove = (x, y) => {
+                if(inputMode !== 'mouse') return;
                 isHandDetected = true;
                 handX = x / window.innerWidth;
                 handY = y / window.innerHeight;
@@ -590,6 +646,7 @@
             });
 
             const onClick = () => {
+                if(inputMode !== 'mouse') return;
                 if (state === 'PHOTO') state = 'EXPLODE';
                 else if (state === 'EXPLODE' && isHoveringPhoto) state = 'PHOTO';
             };
@@ -611,6 +668,8 @@
             hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
             
             hands.onResults(results => {
+                if(inputMode !== 'camera') return; // Stop processing if exited
+
                 ctx.clearRect(0,0, 240, 135); ctx.drawImage(results.image, 0, 0, 240, 135);
 
                 if (results.multiHandLandmarks.length > 0) {
@@ -618,16 +677,19 @@
                     const lm = results.multiHandLandmarks[0];
                     handX = 1 - lm[9].x; handY = lm[9].y; // Mirror fix
 
+                    // --- HAND GESTURE LOGIC (Original from Ver 1.0) ---
                     const tips = [8,12,16,20]; const wrist = lm[0];
                     let openDist = 0; tips.forEach(i => openDist += Math.hypot(lm[i].x-wrist.x, lm[i].y-wrist.y));
                     const avgDist = openDist / 4;
                     const pinchDist = Math.hypot(lm[4].x-lm[8].x, lm[4].y-lm[8].y);
 
+                    // Heart Logic (2 hands)
                     if (results.multiHandLandmarks.length === 2) {
                         const h2 = results.multiHandLandmarks[1];
                         if (Math.hypot(lm[8].x - h2[8].x, lm[8].y - h2[8].y) < 0.1) { state = 'HEART'; return; }
                     }
 
+                    // Main State Logic
                     if (avgDist < 0.25) state = 'TREE'; 
                     else if (pinchDist < 0.05) state = 'PHOTO'; 
                     else state = 'EXPLODE'; 
@@ -636,14 +698,15 @@
                 }
             });
 
-            let frameCnt = 0; // Optimization from ver1.0
-            const cameraUtils = new Camera(video, {
+            let frameCnt = 0; 
+            cameraObj = new Camera(video, {
                 onFrame: async () => { 
-                    frameCnt++; if(frameCnt % 2 !== 0) return; // Process every 2nd frame
+                    if(inputMode !== 'camera') return; // Stop sending frames if exited
+                    frameCnt++; if(frameCnt % 2 !== 0) return; 
                     await hands.send({image: video}); 
                 }, width: 1280, height: 720
             });
-            await cameraUtils.start();
+            await cameraObj.start();
         }
         
         scanImages(); // Start scanning immediately
