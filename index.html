@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magic Christmas - Ultimate Version</title>
+    <title>Magic Christmas - Grand Luxury</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;600&family=Mountains+of+Christmas:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400&family=Dancing+Script:wght@700&family=Pacifico&display=swap" rel="stylesheet">
 
     <!-- Three.js & Post Processing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -25,154 +25,150 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <style>
-        body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Montserrat', sans-serif; user-select: none; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Inter', sans-serif; user-select: none; }
         #canvas-container { width: 100%; height: 100vh; display: block; }
         
-        /* UI Layer */
-        #ui-layer {
-            position: absolute; bottom: 30px; left: 50%; 
-            transform: translateX(-50%);
-            width: 95%; max-width: 800px;
-            text-align: center; pointer-events: none; z-index: 100;
-            display: none; /* Ẩn lúc đầu */
-            flex-direction: column; align-items: center; gap: 15px;
-        }
-        
-        .guide-box { 
-            background: rgba(20, 20, 20, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 215, 0, 0.3);
-            border-radius: 20px;
-            padding: 12px 25px;
-            display: flex; gap: 25px; justify-content: center; flex-wrap: wrap;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            transition: all 0.3s;
-        }
-
-        .guide-item {
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-            color: rgba(255, 255, 255, 0.6); font-size: 11px; letter-spacing: 1px;
-            transition: all 0.3s; padding: 5px 10px; border-radius: 10px;
-        }
-        .guide-item span { font-size: 22px; display: block; height: 30px; line-height: 30px;}
-        .guide-item b { font-weight: 700; text-transform: uppercase; }
-        
-        .guide-item.active {
-            color: #FFF; background: rgba(255, 215, 0, 0.2);
-            transform: scale(1.1);
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
-        }
-        .guide-item.active b { color: #FFD700; }
-
-        /* Màn hình Intro/Loading */
+        /* Intro Screen - Grand Style */
         #intro-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, #1a0505 0%, #000000 100%);
+            background: radial-gradient(circle at center, #1a1500 0%, #000000 100%); 
             z-index: 200; display: flex; flex-direction: column; 
             justify-content: center; align-items: center; text-align: center;
         }
-        
         #loading-text {
-            color: #FFD700; font-size: 24px; font-weight: 300; letter-spacing: 4px;
-            margin-bottom: 30px; text-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+            color: #D4AF37; font-family: 'Cinzel', serif; font-size: 28px; letter-spacing: 6px;
+            margin-bottom: 40px; text-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+            animation: breathe 3s infinite ease-in-out;
         }
-        
+        @keyframes breathe { 0%, 100% { opacity: 0.8; } 50% { opacity: 1; text-shadow: 0 0 25px rgba(212, 175, 55, 0.8); } }
+
         #error-msg {
             color: #FF5252; font-weight: bold; margin-top: 15px; display: none; font-size: 14px;
-            background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; border: 1px solid #FF5252;
+            background: rgba(0,0,0,0.8); padding: 20px; border-radius: 4px; border: 1px solid #FF5252;
         }
 
-        /* Nút chọn chế độ */
-        .mode-container { display: none; gap: 20px; flex-wrap: wrap; justify-content: center;}
+        /* Mode Selection Buttons */
+        .mode-container { display: none; gap: 30px; flex-wrap: wrap; justify-content: center;}
         .mode-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 215, 0, 0.3);
-            color: #FFF; padding: 20px 40px; border-radius: 15px;
-            width: 260px; cursor: pointer; transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            color: #FFF; padding: 25px 40px; border-radius: 2px;
+            width: 280px; cursor: pointer; transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
             text-align: left; position: relative; overflow: hidden;
         }
-        .mode-btn:hover { background: rgba(255, 215, 0, 0.15); border-color: #FFD700; transform: translateY(-5px); }
-        .mode-btn h3 { margin: 0 0 5px 0; color: #FFD700; font-size: 18px; }
-        .mode-btn p { margin: 0; font-size: 12px; color: #AAA; }
-        .mode-btn .icon { font-size: 30px; position: absolute; right: 20px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
+        .mode-btn::before {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(212, 175, 55, 0.1), transparent);
+            transform: translateX(-100%); transition: 0.5s;
+        }
+        .mode-btn:hover::before { transform: translateX(100%); }
+        .mode-btn:hover { background: rgba(212, 175, 55, 0.1); border-color: #D4AF37; transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .mode-btn h3 { margin: 0 0 8px 0; color: #D4AF37; font-family: 'Cinzel', serif; font-size: 20px; }
+        .mode-btn p { margin: 0; font-size: 12px; color: #888; font-weight: 300; }
+        .mode-btn .icon { font-size: 32px; position: absolute; right: 25px; top: 50%; transform: translateY(-50%); opacity: 0.8; filter: grayscale(100%); transition: 0.3s; }
+        .mode-btn:hover .icon { filter: grayscale(0%); opacity: 1; }
 
-        /* Nút Tim cho chế độ Touch */
+        /* UI Layer */
+        #ui-layer {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            width: 95%; max-width: 900px; text-align: center; pointer-events: none; z-index: 100;
+            display: none; flex-direction: column; align-items: center; gap: 20px;
+        }
+        .guide-box { 
+            background: rgba(10, 10, 10, 0.7); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 50px;
+            padding: 15px 40px; display: flex; gap: 40px; justify-content: center; flex-wrap: wrap;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        }
+        .guide-item {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            color: rgba(255, 255, 255, 0.4); font-size: 10px; letter-spacing: 2px;
+            transition: all 0.4s;
+        }
+        .guide-item span { font-size: 24px; display: block; margin-bottom: 2px;}
+        .guide-item b { font-weight: 600; text-transform: uppercase; font-family: 'Cinzel', serif; }
+        .guide-item.active { color: #D4AF37; transform: translateY(-3px); text-shadow: 0 0 15px rgba(212, 175, 55, 0.6); }
+
+        /* Buttons */
+        #back-btn {
+            position: absolute; top: 30px; left: 30px; z-index: 101;
+            background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #AAA; padding: 12px 24px; border-radius: 30px; cursor: pointer; 
+            font-family: 'Inter', sans-serif; font-size: 12px; letter-spacing: 1px;
+            transition: all 0.3s; display: none; text-transform: uppercase;
+        }
+        #back-btn:hover { border-color: #D4AF37; color: #FFF; background: rgba(0,0,0,0.8); }
+
         #heart-btn {
             pointer-events: auto; cursor: pointer;
-            background: rgba(255, 20, 147, 0.2);
-            border: 2px solid #FF1493; color: #FF1493;
-            width: 60px; height: 60px; border-radius: 50%;
-            font-size: 24px; display: none; 
-            align-items: center; justify-content: center;
-            box-shadow: 0 0 20px rgba(255, 20, 147, 0.4);
-            margin-top: 5px; animation: pulse-btn 2s infinite;
+            background: linear-gradient(135deg, #ff3366, #ff0033); border: none; color: white;
+            width: 64px; height: 64px; border-radius: 50%; font-size: 24px; display: none; 
+            align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(255, 0, 51, 0.3);
+            margin-top: 10px; transition: transform 0.2s;
         }
-        @keyframes pulse-btn { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        #heart-btn:active { transform: scale(0.9); }
 
-        /* Nút Back (Thoát Mode) */
-        #back-btn {
-            position: absolute; top: 20px; left: 20px; z-index: 101;
-            background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #FFF; padding: 10px 20px; border-radius: 30px;
-            font-family: 'Montserrat', sans-serif; cursor: pointer;
-            transition: all 0.3s; display: none;
-        }
-        #back-btn:hover { background: rgba(255, 215, 0, 0.2); border-color: #FFD700; color: #FFD700; }
-
-        #camera-preview {
-            position: absolute; top: 20px; right: 20px;
-            width: 240px; height: 135px; /* 16:9 */
-            border-radius: 12px; border: 2px solid rgba(255, 215, 0, 0.3);
-            transform: scaleX(-1); opacity: 0.8;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        /* Camera Frame Wrapper */
+        #camera-container {
+            position: absolute; top: 30px; right: 30px; 
+            width: 200px; height: 112px; /* 16:9 ratio */
             z-index: 90; display: none;
+            padding: 4px;
+            background: linear-gradient(45deg, #B8860B, #FFD700, #B8860B);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+            transform: scaleX(-1);
+        }
+        
+        #camera-preview {
+            width: 100%; height: 100%;
+            border-radius: 6px;
+            background: #000;
+            display: block;
         }
 
-        #copyright {
-            position: absolute; bottom: 10px; right: 20px;
-            color: rgba(255, 255, 255, 0.2); font-size: 11px; z-index: 90;
-        }
+        #copyright { position: absolute; bottom: 15px; right: 30px; color: rgba(255, 255, 255, 0.15); font-size: 10px; z-index: 90; font-family: 'Inter', sans-serif; letter-spacing: 1px;}
     </style>
 </head>
 <body>
 
-    <!-- INTRO & MODE SELECTION -->
     <div id="intro-screen">
-        <div id="loading-text">SCANNING MEMORIES...</div>
+        <div id="loading-text">MEMORIES LOADING...</div>
         <div id="error-msg"></div>
-        
         <div class="mode-container" id="mode-selection">
             <div class="mode-btn" onclick="startApp('camera')">
-                <h3>Camera Magic</h3>
-                <p>Use hand gestures to control.<br>Requires Webcam.</p>
-                <div class="icon">📷</div>
+                <h3>Gesture Control</h3>
+                <p>Immersive hand tracking experience.</p>
+                <div class="icon">✨</div>
             </div>
             <div class="mode-btn" onclick="startApp('mouse')">
-                <h3>Touch / Mouse</h3>
-                <p>Simple control for Mobile/PC.<br>Tap & Drag.</p>
+                <h3>Interactive Mode</h3>
+                <p>Touch & Mouse control.</p>
                 <div class="icon">👆</div>
             </div>
         </div>
     </div>
 
-    <!-- IN-GAME UI -->
-    <button id="back-btn" onclick="exitToMenu()">🔙 MENU</button>
+    <button id="back-btn" onclick="exitToMenu()">Back to Menu</button>
     
     <div id="ui-layer">
         <div class="guide-box">
-            <div class="guide-item" id="st-tree"><span>✊</span><b>TREE</b></div>
-            <div class="guide-item" id="st-explode"><span>🖐</span><b>GALLERY</b></div>
-            <div class="guide-item" id="st-heart"><span>🫶</span><b>LOVE</b></div>
-            <div class="guide-item" id="st-photo"><span>👌</span><b>ZOOM</b></div>
+            <div class="guide-item" id="st-tree"><span>✊</span><b>Tree</b></div>
+            <div class="guide-item" id="st-explode"><span>🖐</span><b>Galaxy</b></div>
+            <div class="guide-item" id="st-heart"><span>🫶</span><b>Love</b></div>
+            <div class="guide-item" id="st-photo"><span>👌</span><b>Focus</b></div>
         </div>
         <button id="heart-btn" onclick="toggleHeart()">❤️</button>
     </div>
 
-    <div id="copyright">© 2025 Magic Christmas</div>
+    <div id="copyright">Original concept by electronicminer | Remastered 2025</div>
+    
+    <div id="camera-container">
+        <canvas id="camera-preview"></canvas>
+    </div>
 
     <div id="canvas-container"></div>
     <video class="input_video" style="display:none"></video>
-    <canvas id="camera-preview"></canvas>
 
     <script>
         const MUSIC_URL = "./audio.mp3";
@@ -181,10 +177,10 @@
 
         const loader = new THREE.TextureLoader();
         let loadedPhotos = []; 
-        let inputMode = 'none'; // 'camera' | 'mouse'
-        let cameraObj = null; // Store camera instance to stop it later
+        let inputMode = 'none'; 
+        let cameraObj = null;
 
-        // --- 1. SMART IMAGE SCANNING ---
+        // --- SCANNING ---
         function scanImages() {
             return new Promise((resolve) => {
                 const maxImagesToCheck = 50;
@@ -215,7 +211,6 @@
                             pendingImages--; consecutiveErrors = 0;
                             const aspect = img.width / img.height;
                             const texture = new THREE.CanvasTexture(img);
-                            console.log(`Loaded: ${fileName}`);
                             loadedPhotos.push({ index: index, texture: texture, aspect: aspect });
                             tryLoadImage(index + 1); 
                         };
@@ -234,9 +229,9 @@
                     if (loadedPhotos.length === 0) {
                         loadingText.style.display = 'none';
                         errDiv.style.display = 'block';
-                        errDiv.innerHTML = `⚠️ KHÔNG TÌM THẤY ẢNH!<br>Vui lòng tạo folder <b>'image'</b> và bỏ ảnh (1.jpg, 2.jpg...) vào.`;
+                        errDiv.innerHTML = `⚠️ IMAGE FOLDER EMPTY<br>Please check 'image/' folder.`;
                     } else {
-                        loadingText.innerText = "CHOOSE YOUR MAGIC";
+                        loadingText.innerText = "CHOOSE EXPERIENCE";
                         modeSel.style.display = 'flex';
                         resolve();
                     }
@@ -245,7 +240,7 @@
             });
         }
 
-        // --- 2. TEXTURES ---
+        // --- TEXTURES ---
         function createCustomTexture(type) {
             const canvas = document.createElement('canvas');
             canvas.width = 64; canvas.height = 64;
@@ -254,26 +249,24 @@
 
             if (type === 'gold_glow') {
                 const grd = ctx.createRadialGradient(cx, cy, 2, cx, cy, 30);
-                grd.addColorStop(0, '#FFFBE6'); grd.addColorStop(0.4, '#FDD835'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+                grd.addColorStop(0, '#FFFFFF'); grd.addColorStop(0.2, '#FFD700'); grd.addColorStop(0.5, '#B8860B'); grd.addColorStop(1, 'rgba(0,0,0,0)');
                 ctx.fillStyle = grd; ctx.fillRect(0,0,64,64);
             } else if (type === 'red_light') {
                 const grd = ctx.createRadialGradient(cx, cy, 2, cx, cy, 30);
-                grd.addColorStop(0, '#FFEBEE'); grd.addColorStop(0.4, '#E53935'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+                grd.addColorStop(0, '#FFFFFF'); grd.addColorStop(0.3, '#FF0000'); grd.addColorStop(0.6, '#8B0000'); grd.addColorStop(1, 'rgba(0,0,0,0)');
                 ctx.fillStyle = grd; ctx.fillRect(0,0,64,64);
             } else if (type === 'gift') {
-                ctx.fillStyle = '#C62828'; ctx.fillRect(12, 12, 40, 40);
-                ctx.fillStyle = '#FFD700'; ctx.fillRect(28, 12, 8, 40); ctx.fillRect(12, 28, 40, 8);
+                ctx.fillStyle = '#8B0000'; ctx.fillRect(10, 10, 44, 44);
+                ctx.fillStyle = '#FFD700'; ctx.fillRect(28, 10, 8, 44); ctx.fillRect(10, 28, 44, 8);
             } else if (type === 'snow') {
                 const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 30);
                 grd.addColorStop(0, 'rgba(255,255,255,0.9)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
                 ctx.fillStyle = grd; ctx.fillRect(0,0,64,64);
             } else if (type === 'cursor') {
-                ctx.beginPath();
-                ctx.arc(cx, cy, 25, 0, Math.PI * 2);
-                ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 4; ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(cx, cy, 8, 0, Math.PI * 2);
-                ctx.fillStyle = '#FFFFFF'; ctx.fill();
+                ctx.beginPath(); ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+                ctx.strokeStyle = '#D4AF37'; ctx.lineWidth = 3; ctx.stroke();
+                ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#D4AF37'; ctx.fill();
             }
             return new THREE.CanvasTexture(canvas);
         }
@@ -287,14 +280,14 @@
         };
 
         const CONFIG = {
-            goldCount: 1800, redCount: 300, giftCount: 120, snowCount: 800,
-            explodeRadius: 60, treeHeight: 75, treeBaseRadius: 32
+            goldCount: 2000, redCount: 500, giftCount: 100, snowCount: 600,
+            explodeRadius: 70, treeHeight: 80, treeBaseRadius: 35
         };
 
         let scene, camera, renderer, composer, bloomPass;
         let groupGold, groupRed, groupGift, groupSnow; 
         let photoMeshes = [];
-        let titleMesh, starMesh, loveMesh, cursorMesh; 
+        let titleMesh, starMesh, loveMesh, cursorMesh;
         
         let state = 'TREE'; 
         let selectedIndex = 0;
@@ -303,7 +296,7 @@
         let isHandDetected = false;
         let idleTimer = null;
 
-        // --- 3. INIT 3D SCENE ---
+        // --- INIT 3D ---
         function init3D() {
             const container = document.getElementById('canvas-container');
             container.innerHTML = ''; 
@@ -319,20 +312,19 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.toneMapping = THREE.ReinhardToneMapping;
-            renderer.toneMappingExposure = 1.2; 
             container.appendChild(renderer.domElement);
 
             const renderScene = new THREE.RenderPass(scene, camera);
             bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 0.2; bloomPass.strength = 0.8; bloomPass.radius = 0.5;
+            bloomPass.threshold = 0.1; bloomPass.strength = 1.0; bloomPass.radius = 0.6;
 
             composer = new THREE.EffectComposer(renderer);
             composer.addPass(renderScene);
             composer.addPass(bloomPass);
 
-            groupGold = createParticleSystem('gold', CONFIG.goldCount, 2.2);
-            groupRed = createParticleSystem('red', CONFIG.redCount, 3.8); 
-            groupGift = createParticleSystem('gift', CONFIG.giftCount, 3.5); 
+            groupGold = createParticleSystem('gold', CONFIG.goldCount, 2.0);
+            groupRed = createParticleSystem('red', CONFIG.redCount, 3.5); 
+            groupGift = createParticleSystem('gift', CONFIG.giftCount, 3.0); 
             createSnow();
             createPhotos();
             createDecorations();
@@ -341,11 +333,10 @@
             animate();
         }
 
-        // --- 4. OBJECT CREATION ---
         function createCursor() {
             const mat = new THREE.SpriteMaterial({ map: textures.cursor, color: 0xffffff, transparent: true, opacity: 0 });
             cursorMesh = new THREE.Sprite(mat);
-            cursorMesh.scale.set(8, 8, 1);
+            cursorMesh.scale.set(6, 6, 1);
             scene.add(cursorMesh);
         }
 
@@ -354,7 +345,7 @@
             const pos = [];
             for(let i=0; i<CONFIG.snowCount; i++) pos.push(Math.random()*200-100, Math.random()*200-100, Math.random()*100-50);
             geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-            const mat = new THREE.PointsMaterial({ size: 1.2, map: textures.snow, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending });
+            const mat = new THREE.PointsMaterial({ size: 1.0, map: textures.snow, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending });
             groupSnow = new THREE.Points(geo, mat);
             scene.add(groupSnow);
         }
@@ -363,23 +354,28 @@
             const pPos=[], pTree=[], pExplode=[], pHeart=[], colors=[], sizes=[], phases=[];
             const baseColor = new THREE.Color();
             if(type==='gold') baseColor.setHex(0xFFD700);
-            else if(type==='red') baseColor.setHex(0xD32F2F);
+            else if(type==='red') baseColor.setHex(0xDC143C); // Crimson red
             else baseColor.setHex(0xFFFFFF);
 
             for(let i=0; i<count; i++) {
-                const h = Math.random()*CONFIG.treeHeight; const y = h - CONFIG.treeHeight/2;
-                const r = (1 - h/CONFIG.treeHeight) * CONFIG.treeBaseRadius * (type==='gold'?Math.sqrt(Math.random()):0.9+Math.random()*0.2);
-                const theta = Math.random()*Math.PI*2;
-                pTree.push(r*Math.cos(theta), y, r*Math.sin(theta));
+                const h = Math.random()*CONFIG.treeHeight; 
+                const y = h - CONFIG.treeHeight/2;
+                const r = (1 - h/CONFIG.treeHeight) * CONFIG.treeBaseRadius;
+                const angle = i * 2.39996;
+                const spiralR = r * (type==='gold' ? Math.sqrt(Math.random()) : 1.0);
+                pTree.push(spiralR*Math.cos(angle), y, spiralR*Math.sin(angle));
                 
                 const phi = Math.acos(2*Math.random()-1); const lam = 2*Math.PI*Math.random();
                 const rad = CONFIG.explodeRadius * Math.cbrt(Math.random());
                 pExplode.push(rad*Math.sin(phi)*Math.cos(lam), rad*Math.sin(phi)*Math.sin(lam), rad*Math.cos(phi));
 
                 const t = Math.random()*Math.PI*2;
-                let hx=16*Math.pow(Math.sin(t),3), hy=13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t);
-                const rFill = Math.pow(Math.random(), 0.3); hx*=rFill; hy*=rFill;
-                pHeart.push(hx*2, hy*2+5, (Math.random()-0.5)*10);
+                let hx = 16 * Math.pow(Math.sin(t), 3);
+                let hy = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+                let hz = (Math.random() - 0.5) * 8;
+                const scale = Math.random();
+                hx *= scale; hy *= scale; hz *= scale;
+                pHeart.push(hx * 1.5, hy * 1.5 + 10, hz * 1.5);
 
                 pPos.push(pTree[i*3], pTree[i*3+1], pTree[i*3+2]);
                 colors.push(baseColor.r, baseColor.g, baseColor.b);
@@ -398,38 +394,65 @@
             return mesh;
         }
 
+        // --- POLAROID STYLE PHOTOS ---
         function createPhotos() {
-            const baseHeight = 8; photoMeshes = []; 
+            const baseHeight = 8; 
+            photoMeshes = []; 
             for(let i=0; i < loadedPhotos.length; i++) {
                 const photoData = loadedPhotos[i];
                 const width = baseHeight * photoData.aspect;
+                
                 const geo = new THREE.PlaneGeometry(width, baseHeight);
-                const borderGeo = new THREE.PlaneGeometry(width + 0.6, baseHeight + 0.6); 
-                const borderMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
-                const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: photoData.texture, side: THREE.DoubleSide }));
-                const border = new THREE.Mesh(borderGeo, borderMat); border.position.z = -0.1; mesh.add(border);
+                const mat = new THREE.MeshBasicMaterial({ map: photoData.texture, side: THREE.DoubleSide });
+                const mesh = new THREE.Mesh(geo, mat);
+
+                const frameGeo = new THREE.PlaneGeometry(width + 1.0, baseHeight + 2.5);
+                frameGeo.translate(0, -0.6, 0); 
+                const frameMat = new THREE.MeshBasicMaterial({ color: 0xFFF8E7 });
+                const frame = new THREE.Mesh(frameGeo, frameMat);
+                frame.position.z = -0.05;
+                
+                const rimGeo = new THREE.PlaneGeometry(width + 1.2, baseHeight + 2.7);
+                rimGeo.translate(0, -0.6, 0);
+                const rimMat = new THREE.MeshBasicMaterial({ color: 0xD4AF37 });
+                const rim = new THREE.Mesh(rimGeo, rimMat);
+                rim.position.z = -0.1;
+
+                mesh.add(frame);
+                mesh.add(rim);
+                
                 mesh.userData = { originalScale: new THREE.Vector3(1, 1, 1), aspect: photoData.aspect };
                 mesh.visible = false; scene.add(mesh); photoMeshes.push(mesh);
             }
         }
 
+        // --- THAY ĐỔI TEXT ---
         function createDecorations() {
             const c1 = document.createElement('canvas'); c1.width=1024; c1.height=256;
             const ctx1 = c1.getContext('2d');
-            ctx1.font='bold 90px "Mountains of Christmas"'; ctx1.fillStyle='#FFD700'; ctx1.textAlign='center';
-            ctx1.shadowColor="#FFA000"; ctx1.shadowBlur=20; ctx1.fillText("Merry Christmas", 512, 130);
+            ctx1.font='bold 90px "Cinzel", serif'; ctx1.fillStyle='#D4AF37'; ctx1.textAlign='center';
+            ctx1.shadowColor="#FFD700"; ctx1.shadowBlur=30; ctx1.fillText("Merry Christmas", 512, 130);
             titleMesh = new THREE.Mesh(new THREE.PlaneGeometry(60,15), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c1), transparent:true, blending:THREE.AdditiveBlending }));
-            titleMesh.position.set(0,50,0); scene.add(titleMesh);
+            titleMesh.position.set(0,55,0); scene.add(titleMesh);
 
             const c2 = document.createElement('canvas'); c2.width=1024; c2.height=256;
             const ctx2 = c2.getContext('2d');
-            ctx2.font='bold 100px "Mountains of Christmas"'; ctx2.fillStyle='#FF69B4'; ctx2.textAlign='center';
-            ctx2.shadowColor="#FF1493"; ctx2.shadowBlur=20; ctx2.fillText("Merry Hẹ Hẹ ♥", 512, 130);
-            loveMesh = new THREE.Mesh(new THREE.PlaneGeometry(60,15), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c2), transparent:true, blending:THREE.AdditiveBlending }));
+            // Cập nhật text mới: Chữ đậm hơn, viền sáng, font Pacifico cho dễ đọc
+            ctx2.font='bold 110px "Pacifico", cursive'; 
+            ctx2.fillStyle='#FF3366'; 
+            ctx2.textAlign='center';
+            ctx2.shadowColor="#FF0033"; 
+            ctx2.shadowBlur=40; // Tăng độ bóng
+            ctx2.lineWidth = 4; // Thêm viền
+            ctx2.strokeStyle = '#FFFFFF';
+            ctx2.strokeText("Merry Hẹ Hẹ ♥", 512, 130);
+            ctx2.fillText("Merry Hẹ Hẹ ♥", 512, 130);
+            
+            loveMesh = new THREE.Mesh(new THREE.PlaneGeometry(70,18), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c2), transparent:true, blending:THREE.AdditiveBlending }));
             loveMesh.position.set(0,0,20); loveMesh.visible=false; scene.add(loveMesh);
 
             const c3=document.createElement('canvas'); c3.width=128; c3.height=128;
-            const ctx3=c3.getContext('2d'); ctx3.fillStyle="#FFFACD"; ctx3.shadowColor="#FFFF00"; ctx3.shadowBlur=30;
+            const ctx3=c3.getContext('2d'); ctx3.fillStyle="#FFFACD"; ctx3.shadowColor="#FFFF00"; ctx3.shadowBlur=40;
             ctx3.beginPath(); 
             for(let i=0;i<5;i++) { ctx3.lineTo(64+Math.cos((18+i*72)/180*Math.PI)*50, 64-Math.sin((18+i*72)/180*Math.PI)*50); ctx3.lineTo(64+Math.cos((54+i*72)/180*Math.PI)*20, 64-Math.sin((54+i*72)/180*Math.PI)*20); }
             ctx3.fill();
@@ -437,9 +460,8 @@
             starMesh.position.set(0, CONFIG.treeHeight/2+2, 0); scene.add(starMesh);
         }
 
-        // --- 5. LOGIC UPDATE & UI FEEDBACK ---
+        // --- UPDATE LOGIC ---
         function updateUIFeedback() {
-            // Update Guide UI based on state
             document.querySelectorAll('.guide-item').forEach(el => el.classList.remove('active'));
             if(state === 'TREE') document.getElementById('st-tree').classList.add('active');
             else if(state === 'EXPLODE') document.getElementById('st-explode').classList.add('active');
@@ -450,7 +472,6 @@
         function updateCursor() {
             if (isHandDetected) {
                 const vec = new THREE.Vector3(); const pos = new THREE.Vector3();
-                // Map coordinates
                 vec.set((handX * 2) - 1, -(handY * 2) + 1, 0.5);
                 vec.unproject(camera);
                 vec.sub(camera.position).normalize();
@@ -459,12 +480,7 @@
                 pos.copy(camera.position).add(vec.multiplyScalar(distanceToTarget));
                 
                 cursorMesh.position.lerp(pos, 0.3);
-                cursorMesh.material.opacity = THREE.MathUtils.lerp(cursorMesh.material.opacity, 0.8, 0.1);
-                
-                // Cursor color change
-                if (state === 'TREE') cursorMesh.material.color.setHex(0xFFD700); 
-                else if (state === 'HEART') cursorMesh.material.color.setHex(0xFF69B4); 
-                else cursorMesh.material.color.setHex(0xFFFFFF); 
+                cursorMesh.material.opacity = THREE.MathUtils.lerp(cursorMesh.material.opacity, 1.0, 0.1);
             } else {
                 cursorMesh.material.opacity = THREE.MathUtils.lerp(cursorMesh.material.opacity, 0, 0.1);
             }
@@ -476,10 +492,24 @@
             const ud = group.geometry.userData;
             const target = (state==='TREE') ? ud.tree : (state==='HEART'? ud.heart : ud.explode);
             
-            // Decoupled Rotation Logic
-            if (state === 'EXPLODE' && !isHoveringPhoto) group.rotation.y += 0.004;
+            // --- NEW ROTATION LOGIC FOR PHOTO RING ---
+            if (state === 'EXPLODE') {
+                const centerThreshold = 0.15;
+                const offset = handX - 0.5;
+                // If hand is far from center and not hovering, rotate ring
+                if (Math.abs(offset) > centerThreshold && !isHoveringPhoto) {
+                    group.rotation.y += offset * 0.08; 
+                }
+            }
             else if (state === 'TREE') group.rotation.y += 0.005;
             else if (state === 'HEART') group.rotation.y = 0;
+
+            if (state === 'TREE') {
+                const breathe = 1 + Math.sin(time * 2) * 0.03; 
+                group.scale.set(breathe, breathe, breathe);
+            } else {
+                group.scale.set(1,1,1);
+            }
 
             for(let i=0; i<pos.length; i++) { pos[i] += (target[i] - pos[i]) * speed; }
             
@@ -494,16 +524,15 @@
         }
 
         function animate() {
-            if (inputMode === 'none') return; // Stop animation loop if in menu
+            if (inputMode === 'none') return; 
 
             requestAnimationFrame(animate);
             const time = Date.now() * 0.001;
             
             updateUIFeedback();
 
-            // Bloom control
             if (bloomPass) {
-                const targetStrength = (state === 'PHOTO') ? 0 : 0.8;
+                const targetStrength = (state === 'PHOTO') ? 0 : 1.2; 
                 bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, targetStrength, 0.1);
             }
 
@@ -512,7 +541,7 @@
             updateParticles(groupGift, 'gift', time, 0.08);
             if(groupSnow) {
                 const pos = groupSnow.geometry.attributes.position.array;
-                for(let i=1; i<pos.length; i+=3) { pos[i] -= 0.1; if(pos[i]<-60) pos[i]=80; }
+                for(let i=1; i<pos.length; i+=3) { pos[i] -= 0.15; if(pos[i]<-60) pos[i]=80; } 
                 groupSnow.geometry.attributes.position.needsUpdate=true;
             }
 
@@ -524,6 +553,7 @@
             
             isHoveringPhoto = false; 
 
+            // --- PHOTO RING EFFECT ---
             if (state === 'EXPLODE' || state === 'PHOTO') {
                 const totalPhotos = photoMeshes.length;
                 if (totalPhotos > 0) {
@@ -533,9 +563,7 @@
 
                     let closestIdx = -1; let minDist = 9999;
 
-                    // Calculate cursor position in 3D space
                     const vec = new THREE.Vector3(); const pos = new THREE.Vector3();
-                    // Map coordinates
                     vec.set((handX * 2) - 1, -(handY * 2) + 1, 0.5);
                     vec.unproject(camera);
                     vec.sub(camera.position).normalize();
@@ -549,7 +577,7 @@
                             const angle = groupGold.rotation.y + i*step;
                             const targetPos = new THREE.Vector3(Math.sin(angle)*dynamicRadius, Math.sin(time+i)*2, Math.cos(angle)*dynamicRadius);
                             m.position.lerp(targetPos, 0.1); m.lookAt(camera.position);
-                            // Use calculated 'pos' instead of cursorMesh.position
+                            
                             const dist = pos.distanceTo(m.position);
                             if (dist < 12) {
                                 if(dist < minDist) { minDist = dist; closestIdx = i; }
@@ -558,13 +586,13 @@
                         } 
                         if (state === 'PHOTO') {
                             if(i === selectedIndex) {
-                                m.position.lerp(new THREE.Vector3(0,0,60), 0.1);
-                                m.scale.lerp(new THREE.Vector3(5, 5, 5), 0.1);
+                                m.position.lerp(new THREE.Vector3(0,0,55), 0.1);
+                                m.scale.lerp(new THREE.Vector3(4, 4, 4), 0.1); 
                                 m.rotation.set(0,0,0);
                             } else { m.scale.lerp(new THREE.Vector3(0,0,0), 0.1); }
                         } else {
                             let targetScale = (i === closestIdx) ? 1.3 : (totalPhotos > 15 ? 0.8 : 1.0);
-                            m.children[0].material.color.setHex(i===closestIdx ? 0xFFFFFF : 0xFFD700);
+                            m.children[1].material.color.setHex(i===closestIdx ? 0xFFFFFF : 0xD4AF37);
                             m.scale.lerp(m.userData.originalScale.clone().multiplyScalar(targetScale), 0.2);
                         }
                     });
@@ -575,12 +603,12 @@
             if(composer) composer.render(); else renderer.render(scene, camera);
         }
 
-        // --- 6. APP CONTROLS ---
+        // --- APP CONTROLS ---
         async function startApp(mode) {
             inputMode = mode;
             document.getElementById('intro-screen').style.display = 'none';
             document.getElementById('ui-layer').style.display = 'flex';
-            document.getElementById('back-btn').style.display = 'block'; // Show back button
+            document.getElementById('back-btn').style.display = 'block'; 
             
             try { await bgMusic.play(); } catch(e) { console.log("Audio autoplay blocked"); }
 
@@ -594,57 +622,36 @@
         }
 
         function exitToMenu() {
-            // Stop logic
             inputMode = 'none';
-            
-            // Stop camera if running
-            if (cameraObj) {
-                // MediaPipe Camera stop is tricky, best to reload or just hide
-                // We will hide and stop processing frames in the callback
-                // Ideally, reload the page to be clean but that stops music
-                // Let's just reset UI
-                document.getElementById('camera-preview').style.display = 'none';
-            }
-
-            // Reset UI
+            document.getElementById('camera-container').style.display = 'none';
             document.getElementById('intro-screen').style.display = 'flex';
             document.getElementById('ui-layer').style.display = 'none';
             document.getElementById('back-btn').style.display = 'none';
             document.getElementById('heart-btn').style.display = 'none';
-            document.getElementById('camera-preview').style.display = 'none';
             
-            // Clear canvas
             const container = document.getElementById('canvas-container');
             container.innerHTML = '';
             
-            // Reset State
-            state = 'TREE';
-            isHandDetected = false;
+            state = 'TREE'; isHandDetected = false;
+            if(cameraObj && cameraObj.stop) cameraObj.stop();
         }
 
         function startMouseMode() {
             document.getElementById('heart-btn').style.display = 'flex';
-            
             const onMove = (x, y) => {
                 if(inputMode !== 'mouse') return;
                 isHandDetected = true;
                 handX = x / window.innerWidth;
                 handY = y / window.innerHeight;
-                
                 if (state === 'TREE' || state === 'HEART') state = 'EXPLODE';
-                
                 if (idleTimer) clearTimeout(idleTimer);
                 idleTimer = setTimeout(() => {
                     if(state === 'EXPLODE') state = 'TREE';
                     isHandDetected = false;
                 }, 4000);
             };
-
             window.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
-            window.addEventListener('touchmove', (e) => {
-                if(e.touches.length > 0) onMove(e.touches[0].clientX, e.touches[0].clientY);
-            });
-
+            window.addEventListener('touchmove', (e) => { if(e.touches.length > 0) onMove(e.touches[0].clientX, e.touches[0].clientY); });
             const onClick = () => {
                 if(inputMode !== 'mouse') return;
                 if (state === 'PHOTO') state = 'EXPLODE';
@@ -658,38 +665,34 @@
 
         async function startCameraMode() {
             document.getElementById('heart-btn').style.display = 'none';
-            document.getElementById('camera-preview').style.display = 'block';
-
+            document.getElementById('camera-container').style.display = 'block';
             const video = document.getElementsByClassName('input_video')[0];
-            const canvas = document.getElementById('camera-preview');
-            const ctx = canvas.getContext('2d');
             
             const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
             hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
             
             hands.onResults(results => {
-                if(inputMode !== 'camera') return; // Stop processing if exited
-
-                ctx.clearRect(0,0, 240, 135); ctx.drawImage(results.image, 0, 0, 240, 135);
+                if(inputMode !== 'camera') return; 
+                const ctx = document.getElementById('camera-preview').getContext('2d');
+                // Canvas size is now set by CSS (200x112), clear and draw accordingly
+                ctx.canvas.width = 200; ctx.canvas.height = 112;
+                ctx.clearRect(0,0, 200, 112); ctx.drawImage(results.image, 0, 0, 200, 112);
 
                 if (results.multiHandLandmarks.length > 0) {
                     isHandDetected = true;
                     const lm = results.multiHandLandmarks[0];
-                    handX = 1 - lm[9].x; handY = lm[9].y; // Mirror fix
+                    handX = 1 - lm[9].x; handY = lm[9].y; 
 
-                    // --- HAND GESTURE LOGIC (Original from Ver 1.0) ---
                     const tips = [8,12,16,20]; const wrist = lm[0];
                     let openDist = 0; tips.forEach(i => openDist += Math.hypot(lm[i].x-wrist.x, lm[i].y-wrist.y));
                     const avgDist = openDist / 4;
                     const pinchDist = Math.hypot(lm[4].x-lm[8].x, lm[4].y-lm[8].y);
 
-                    // Heart Logic (2 hands)
                     if (results.multiHandLandmarks.length === 2) {
                         const h2 = results.multiHandLandmarks[1];
                         if (Math.hypot(lm[8].x - h2[8].x, lm[8].y - h2[8].y) < 0.1) { state = 'HEART'; return; }
                     }
 
-                    // Main State Logic
                     if (avgDist < 0.25) state = 'TREE'; 
                     else if (pinchDist < 0.05) state = 'PHOTO'; 
                     else state = 'EXPLODE'; 
@@ -701,15 +704,15 @@
             let frameCnt = 0; 
             cameraObj = new Camera(video, {
                 onFrame: async () => { 
-                    if(inputMode !== 'camera') return; // Stop sending frames if exited
-                    frameCnt++; if(frameCnt % 2 !== 0) return; 
+                    if(inputMode !== 'camera') return; 
+                    frameCnt++; if(frameCnt % 3 !== 0) return; 
                     await hands.send({image: video}); 
                 }, width: 1280, height: 720
             });
             await cameraObj.start();
         }
         
-        scanImages(); // Start scanning immediately
+        scanImages(); 
 
         window.addEventListener('resize', () => {
             if(camera) {
